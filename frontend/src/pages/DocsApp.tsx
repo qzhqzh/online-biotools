@@ -27,7 +27,22 @@ const ENDPOINTS = [
   {
     method: "POST",
     path: "/api/v1/annotations/",
-    desc: "提交注释：engine=vep|annovar|both，assembly，variants[]",
+    desc: "同步注释：engine=vep|annovar|both，assembly，variants[]",
+  },
+  {
+    method: "POST",
+    path: "/api/v1/jobs/",
+    desc: "创建后台注释任务：engines[]，assembly，variants[]（10 秒内同客户端仅一次）",
+  },
+  {
+    method: "GET",
+    path: "/api/v1/jobs/",
+    desc: "任务历史列表",
+  },
+  {
+    method: "GET",
+    path: "/api/v1/jobs/{id}/",
+    desc: "查询单个任务状态与结果",
   },
 ]
 
@@ -35,7 +50,7 @@ export default function DocsApp() {
   return (
     <AppShell
       title="API 说明"
-      description="Django REST framework 对外契约（当前公开，后续将加鉴权）。"
+      description="Django REST framework 对外契约。生产环境可通过 X-API-Key 鉴权；浏览器密钥在「引擎与设置」页配置。"
       crumbs={[{ label: "API 说明" }]}
     >
       <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">

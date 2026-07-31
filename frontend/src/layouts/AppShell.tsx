@@ -1,10 +1,13 @@
 import type { ReactNode } from "react"
 import {
   Activity,
+  BookMarked,
   BookOpen,
   Dna,
   FlaskConical,
+  History,
   Home,
+  Pill,
 } from "lucide-react"
 
 import {
@@ -38,11 +41,17 @@ export type Crumb = {
   href?: string
 }
 
-const NAV = [
+const NAV_WORKSPACE = [
   { title: "总览", href: "/", icon: Home },
   { title: "变异注释", href: "/tools/annotate/", icon: FlaskConical },
-  { title: "引擎状态", href: "/tools/engines/", icon: Activity },
+  { title: "任务历史", href: "/tools/jobs/", icon: History },
+  { title: "引擎与设置", href: "/tools/engines/", icon: Activity },
   { title: "API 说明", href: "/docs/", icon: BookOpen },
+]
+
+const NAV_KNOWLEDGE = [
+  { title: "基因知识库", href: "/knowledge/genes/", icon: BookMarked },
+  { title: "氨基酸映射", href: "/knowledge/amino-acids/", icon: Pill },
 ]
 
 function isActive(href: string) {
@@ -57,6 +66,38 @@ type AppShellProps = {
   crumbs?: Crumb[]
   actions?: ReactNode
   children: ReactNode
+}
+
+function NavGroup({
+  label,
+  items,
+}: {
+  label: string
+  items: typeof NAV_WORKSPACE
+}) {
+  return (
+    <SidebarGroup>
+      <SidebarGroupLabel>{label}</SidebarGroupLabel>
+      <SidebarGroupContent>
+        <SidebarMenu>
+          {items.map((item) => (
+            <SidebarMenuItem key={item.href}>
+              <SidebarMenuButton
+                asChild
+                isActive={isActive(item.href)}
+                tooltip={item.title}
+              >
+                <a href={item.href}>
+                  <item.icon />
+                  <span>{item.title}</span>
+                </a>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ))}
+        </SidebarMenu>
+      </SidebarGroupContent>
+    </SidebarGroup>
+  )
 }
 
 export function AppShell({
@@ -90,27 +131,8 @@ export function AppShell({
         </SidebarHeader>
 
         <SidebarContent>
-          <SidebarGroup>
-            <SidebarGroupLabel>工作区</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {NAV.map((item) => (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive(item.href)}
-                      tooltip={item.title}
-                    >
-                      <a href={item.href}>
-                        <item.icon />
-                        <span>{item.title}</span>
-                      </a>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+          <NavGroup label="工作区" items={NAV_WORKSPACE} />
+          <NavGroup label="知识库" items={NAV_KNOWLEDGE} />
         </SidebarContent>
 
         <SidebarFooter>

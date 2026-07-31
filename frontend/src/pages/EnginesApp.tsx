@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 
+import { ApiKeyCard } from "@/components/ApiKeyCard"
 import { AppShell } from "@/layouts/AppShell"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -32,67 +33,73 @@ export default function EnginesApp() {
 
   return (
     <AppShell
-      title="引擎状态"
-      description="检查注释引擎与参考基因组数据是否就绪。"
+      title="引擎与设置"
+      description="查看注释引擎就绪状态，并配置本机 API Key。"
       crumbs={[
         { label: "工具", href: "/tools/annotate/" },
-        { label: "引擎状态" },
+        { label: "引擎与设置" },
       ]}
     >
-      <Card>
-        <CardHeader>
-          <CardTitle>注册引擎</CardTitle>
-          <CardDescription>
-            数据不就绪时，注释接口会返回 HTTP 503。
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {error ? (
-            <p className="text-sm text-destructive">{error}</p>
-          ) : !engines ? (
-            <div className="space-y-3">
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-12 w-full" />
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Engine</TableHead>
-                  <TableHead>Version</TableHead>
-                  <TableHead>Supported</TableHead>
-                  <TableHead>Ready assemblies</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {engines.map((engine) => (
-                  <TableRow key={engine.id}>
-                    <TableCell className="font-medium">{engine.name}</TableCell>
-                    <TableCell>{engine.version}</TableCell>
-                    <TableCell>{engine.supported_assemblies.join(", ")}</TableCell>
-                    <TableCell>
-                      {engine.ready_assemblies.join(", ") || "—"}
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <Badge variant={engine.ready ? "default" : "secondary"}>
-                          {engine.ready ? "Ready" : "Not ready"}
-                        </Badge>
-                        {engine.disabled_reason ? (
-                          <p className="text-xs text-muted-foreground">
-                            {engine.disabled_reason}
-                          </p>
-                        ) : null}
-                      </div>
-                    </TableCell>
+      <div className="space-y-6">
+        <ApiKeyCard />
+
+        <Card>
+          <CardHeader>
+            <CardTitle>注册引擎</CardTitle>
+            <CardDescription>
+              数据不就绪时，对应组合不可选，注释接口会返回错误。
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {error ? (
+              <p className="text-sm text-destructive">{error}</p>
+            ) : !engines ? (
+              <div className="space-y-3">
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Engine</TableHead>
+                    <TableHead>Version</TableHead>
+                    <TableHead>Supported</TableHead>
+                    <TableHead>Ready assemblies</TableHead>
+                    <TableHead>Status</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                </TableHeader>
+                <TableBody>
+                  {engines.map((engine) => (
+                    <TableRow key={engine.id}>
+                      <TableCell className="font-medium">{engine.name}</TableCell>
+                      <TableCell>{engine.version}</TableCell>
+                      <TableCell>
+                        {engine.supported_assemblies.join(", ")}
+                      </TableCell>
+                      <TableCell>
+                        {engine.ready_assemblies.join(", ") || "—"}
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <Badge variant={engine.ready ? "default" : "secondary"}>
+                            {engine.ready ? "Ready" : "Not ready"}
+                          </Badge>
+                          {engine.disabled_reason ? (
+                            <p className="text-xs text-muted-foreground">
+                              {engine.disabled_reason}
+                            </p>
+                          ) : null}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </AppShell>
   )
 }

@@ -29,7 +29,7 @@ export default function HomeApp() {
       description="统一入口：变异注释、引擎就绪状态与 REST API。"
       crumbs={[{ label: "总览" }]}
     >
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>快捷入口</CardDescription>
@@ -37,7 +37,7 @@ export default function HomeApp() {
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              使用 Monaco 编辑 VCF/变异，调用 VEP 或 ANNOVAR。
+              提交 VCF/变异到后台任务，支持多工具对比。
             </p>
             <Button asChild>
               <a href="/tools/annotate/">
@@ -51,17 +51,32 @@ export default function HomeApp() {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>运维</CardDescription>
-            <CardTitle className="text-lg">引擎状态</CardTitle>
+            <CardTitle className="text-lg">引擎与设置</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              查看 VEP / ANNOVAR 的 assembly 就绪情况。
+              查看引擎就绪状态，配置本机 API Key。
             </p>
             <Button variant="outline" asChild>
               <a href="/tools/engines/">
                 <Activity />
-                查看状态
+                打开
               </a>
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>记录</CardDescription>
+            <CardTitle className="text-lg">任务历史</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              查看后台注释任务队列与历史结果。
+            </p>
+            <Button variant="outline" asChild>
+              <a href="/tools/jobs/">查看任务</a>
             </Button>
           </CardContent>
         </Card>
