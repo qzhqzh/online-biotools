@@ -67,16 +67,15 @@ hg19/
 hg38/
 **/*.tar.gz
 **/*.tar.gz.*
-**/*.fa
-**/*.fa.gz
-**/*.fasta
-**/*.fasta.gz
 **/*.aria2
 hg19_*.txt
 hg38_*.txt
 *.sites.*.txt
 *.sites.*.txt.idx
 *.sites.*.txt.temp
+
+# Reference FASTA belongs under ignored data/cache directories. Do not ignore
+# *.fa/*.fasta globally so small fixtures can be committed under fixtures/.
 
 # Local scratch / empty mounts
 online-tool/online-vep/data/
