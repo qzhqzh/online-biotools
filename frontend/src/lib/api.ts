@@ -107,6 +107,7 @@ export class ApiError extends Error {
 
 const API_KEY_STORAGE = "biotools_api_key"
 const SUBMIT_COOLDOWN_MS = 10_000
+let lastSuccessfulSubmitAt: number | null = null
 
 export function getApiKey(): string {
   return localStorage.getItem(API_KEY_STORAGE) || ""
@@ -118,8 +119,14 @@ export function setApiKey(key: string) {
 }
 
 export function getSubmitCooldownRemainingMs(lastSubmitAt: number | null): number {
-  if (!lastSubmitAt) return 0
-  return Math.max(0, SUBMIT_COOLDOWN_MS - (Date.now() - lastSubmitAt))
+  // The page state still triggers re-renders, but only a successful API response
+  // is allowed to start the client-side cooldown.
+  if (lastSubmitAt == null && lastSuccessfulSubmitAt == null) return 0
+  if (!lastSuccessfulSubmitAt) return 0
+  return Math.max(
+    0,
+    SUBMIT_COOLDOWN_MS - (Date.now() - lastSuccessfulSubmitAt),
+  )
 }
 
 function csrfToken(): string | undefined {
@@ -163,6 +170,18 @@ async function parseError(res: Response): Promise<ApiError> {
   )
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function isTransientPollError(error: unknown): boolean {
+  if (error instanceof ApiError) {
+    return error.status === 408 || error.status === 429 || error.status >= 500
+  }
+  // Browser fetch rejects with TypeError for DNS, connection and CORS failures.
+  return error instanceof TypeError
+}
+
 export async function fetchEngines(): Promise<EngineInfo[]> {
   const res = await fetch("/api/v1/engines/")
   if (!res.ok) throw await parseError(res)
@@ -195,7 +214,9 @@ export async function createAnnotationJob(payload: {
     body: JSON.stringify(payload),
   })
   if (!res.ok) throw await parseError(res)
-  return res.json()
+  const job = (await res.json()) as AnnotationJob
+  lastSuccessfulSubmitAt = Date.now()
+  return job
 }
 
 export async function fetchAnnotationJob(id: string): Promise<AnnotationJob> {
@@ -215,15 +236,39 @@ export async function listAnnotationJobs(limit = 50): Promise<AnnotationJob[]> {
 
 export async function waitForAnnotationJob(
   id: string,
-  opts: { intervalMs?: number; timeoutMs?: number } = {},
+  opts: {
+    intervalMs?: number
+    timeoutMs?: number
+    maxTransientErrors?: number
+  } = {},
 ): Promise<AnnotationJob> {
   const intervalMs = opts.intervalMs ?? 1500
   const timeoutMs = opts.timeoutMs ?? 320_000
+  const maxTransientErrors = opts.maxTransientErrors ?? 3
   const started = Date.now()
+  let transientErrors = 0
+
   while (Date.now() - started < timeoutMs) {
-    const job = await fetchAnnotationJob(id)
-    if (job.status === "succeeded" || job.status === "failed") return job
-    await new Promise((r) => setTimeout(r, intervalMs))
+    try {
+      const job = await fetchAnnotationJob(id)
+      transientErrors = 0
+      if (job.status === "succeeded" || job.status === "failed") return job
+    } catch (error) {
+      if (
+        !isTransientPollError(error) ||
+        transientErrors >= maxTransientErrors
+      ) {
+        throw error
+      }
+      transientErrors += 1
+      const backoffMs = Math.min(
+        intervalMs * 2 ** (transientErrors - 1),
+        10_000,
+      )
+      await sleep(backoffMs)
+      continue
+    }
+    await sleep(intervalMs)
   }
   throw new ApiError("任务等待超时", { status: 504, code: "job_timeout" })
 }
