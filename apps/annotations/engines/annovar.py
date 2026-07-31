@@ -20,6 +20,10 @@ from apps.annotations.engines.base import (
     UnsupportedAssembly,
 )
 from apps.annotations.engines.results import VariantResult
+from apps.annotations.engines.transcript_prefer import (
+    mane_rank_from_accession,
+    pick_reason_for_rank,
+)
 from apps.annotations.normalize import normalize_variant
 
 _annovar_semaphore: threading.Semaphore | None = None
@@ -101,18 +105,43 @@ def runner_ready() -> bool:
     return local_bin_ready() or docker_available()
 
 
+def assembly_meta(assembly: str) -> dict[str, Any]:
+    try:
+        buildver = buildver_for_assembly(assembly)
+    except UnsupportedAssembly:
+        return {"assembly": assembly, "ready": False}
+    ready = is_db_ready(assembly)
+    protocol = None
+    if ready:
+        try:
+            protocol = protocol_for_db(assembly)
+        except EngineNotReady:
+            protocol = None
+    return {
+        "assembly": assembly,
+        "ready": ready,
+        "buildver": buildver,
+        "protocol": protocol,
+        "software_version": settings.ANNOVAR_VERSION_LABEL,
+    }
+
+
 def engine_info() -> dict[str, Any]:
-    ready = bool(ready_assemblies()) and runner_ready()
+    ready_list = ready_assemblies() if runner_ready() else []
+    ready = bool(ready_list) and runner_ready()
     return {
         "id": "annovar",
         "name": "ANNOVAR",
         "version": settings.ANNOVAR_VERSION_LABEL,
         "supported_assemblies": supported_assemblies(),
-        "ready_assemblies": ready_assemblies() if runner_ready() else [],
+        "ready_assemblies": ready_list,
         "ready": ready,
         "default_assembly": "GRCh38",
         "mode": settings.ANNOVAR_MODE,
         "license_note": "Confirm ANNOVAR redistribution/online-service rights before public exposure.",
+        "assemblies_meta": {
+            assembly: assembly_meta(assembly) for assembly in supported_assemblies()
+        },
     }
 
 
@@ -132,13 +161,14 @@ def to_avinput_line(raw: str) -> tuple[str, str]:
     return original, f"{chrom}\t{start}\t{end}\t{ref}\t{alt}"
 
 
-def _parse_aachange(aachange: str) -> tuple[str | None, str | None, str | None]:
-    """Parse AAChange.refGene like GENE:NM_x:exonN:c.xxx:p.yyy"""
-    if not aachange or aachange == ".":
-        return None, None, None
-    # Take first transcript entry
-    first = aachange.split(",")[0]
-    parts = first.split(":")
+def _parse_aachange_entry(
+    entry: str,
+) -> tuple[str | None, str | None, str | None, str | None]:
+    """Parse one AAChange item → (gene, feature, cdot, protein)."""
+    parts = [p for p in entry.split(":") if p]
+    if not parts:
+        return None, None, None, None
+    gene = parts[0] if parts else None
     feature = parts[1] if len(parts) > 1 else None
     cdot = next((p for p in parts if p.startswith("c.")), None)
     protein = next((p for p in parts if p.startswith("p.")), None)
@@ -146,7 +176,92 @@ def _parse_aachange(aachange: str) -> tuple[str | None, str | None, str | None]:
         cdot = f"{feature}:{cdot}"
     if protein and feature:
         protein = f"{feature}:{protein}"
-    return feature, cdot, protein
+    return gene, feature, cdot, protein
+
+
+def _transcript_record(
+    gene: str | None,
+    feature: str | None,
+    cdot: str | None,
+    protein: str | None,
+    *,
+    rank: int,
+    preferred: bool,
+    source_index: int,
+) -> dict[str, Any]:
+    mane_status = None
+    if rank == 0:
+        mane_status = "select"
+    elif rank == 1:
+        mane_status = "plus_clinical"
+    return {
+        "gene": gene,
+        "feature": feature,
+        "cdot": cdot,
+        "protein": protein,
+        "preferred": preferred,
+        "mane": rank < 100,
+        "mane_status": mane_status,
+        "source_index": source_index,
+    }
+
+
+def _parse_aachange(aachange: str) -> dict[str, Any]:
+    """Parse all AAChange isoforms; core = MANE Select > Plus Clinical > first listed."""
+    empty = {
+        "feature": None,
+        "cdot": None,
+        "protein": None,
+        "pick_reason": None,
+        "transcript_count": 0,
+        "canonical": None,
+        "transcripts": [],
+        "picked_index": None,
+    }
+    if not aachange or aachange == ".":
+        return empty
+
+    entries = [e.strip() for e in aachange.split(",") if e.strip() and e.strip() != "."]
+    if not entries:
+        return empty
+
+    scored: list[tuple[int, int, tuple[str | None, str | None, str | None, str | None]]] = []
+    for idx, entry in enumerate(entries):
+        parsed = _parse_aachange_entry(entry)
+        _gene, feature, _cdot, _protein = parsed
+        rank = mane_rank_from_accession(feature)
+        scored.append((rank, idx, parsed))
+
+    scored.sort(key=lambda x: (x[0], x[1]))
+    best_rank, best_idx, (_g, feature, cdot, protein) = scored[0]
+    pick_reason = pick_reason_for_rank(best_rank)
+    canonical = "YES" if best_rank < 100 else None
+
+    transcripts = [
+        _transcript_record(
+            g,
+            feat,
+            cd,
+            prot,
+            rank=rank,
+            preferred=False,
+            source_index=idx,
+        )
+        for rank, idx, (g, feat, cd, prot) in scored
+    ]
+    for i, t in enumerate(transcripts):
+        t["preferred"] = i == 0
+
+    return {
+        "feature": feature,
+        "cdot": cdot,
+        "protein": protein,
+        "pick_reason": pick_reason,
+        "transcript_count": len(entries),
+        "canonical": canonical,
+        "picked_index": best_idx,
+        "transcripts": transcripts,
+    }
 
 
 def parse_multianno(
@@ -179,19 +294,28 @@ def parse_multianno(
                 or row.get("AAChange.refGene")
                 or ""
             )
-            feature, cdot, protein = _parse_aachange(aachange)
+            picked = _parse_aachange(aachange)
 
             results.append(
                 VariantResult(
                     input=display,
                     allele=alt if alt != "." else None,
                     gene=gene,
-                    feature=feature,
+                    feature=picked["feature"],
                     consequence=consequence or None,
-                    cdot=cdot,
-                    protein=protein,
+                    cdot=picked["cdot"],
+                    protein=picked["protein"],
+                    canonical=picked["canonical"],
                     engine="annovar",
-                    details={"annovar": dict(row)},
+                    transcripts=picked.get("transcripts") or [],
+                    details={
+                        "annovar": dict(row),
+                        "transcript_pick": {
+                            "reason": picked["pick_reason"],
+                            "transcript_count": picked["transcript_count"],
+                            "picked_index": picked.get("picked_index"),
+                        },
+                    },
                 )
             )
     return results

@@ -19,6 +19,8 @@ class VariantResult:
     biotype: str | None = None
     canonical: str | None = None
     engine: str = "vep"
+    # All isoform hits (e.g. ANNOVAR AAChange); preferred first. Top-level fields = preferred.
+    transcripts: list[dict[str, Any]] = field(default_factory=list)
     details: dict[str, Any] = field(default_factory=dict)
 
     def as_dict(self) -> dict[str, Any]:
@@ -34,5 +36,6 @@ class VariantResult:
             "biotype": self.biotype,
             "canonical": self.canonical,
             "engine": self.engine,
+            "transcripts": self.transcripts,
             "details": self.details,
         }
