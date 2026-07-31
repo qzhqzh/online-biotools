@@ -12,9 +12,15 @@ services:
       VEP_CACHE_DIR: /data/vep
       VEP_ASSEMBLY: GRCh37
       VEP_MAX_CONCURRENCY: "2"
+      ANNOVAR_MODE: ${ANNOVAR_MODE:-docker}
+      ANNOVAR_DB_DIR: /data/annovar
+      ANNOVAR_DOCKER_IMAGE: ${ANNOVAR_DOCKER_IMAGE:-registry.cn-shanghai.aliyuncs.com/kszy-biosoft/annovar:v20180416_2}
+      ANNOVAR_TABLE_BIN: /home/TOOLS/tools/annovar/current/bin/table_annovar.pl
     volumes:
-      # Prefer ./data/vep; can symlink from legacy online-tool/online-vep/cache
       - ${VEP_HOST_CACHE:-./data/vep}:/data/vep:ro
+      - ${ANNOVAR_HOST_DB:-./data/annovar-hg38}:/data/annovar:ro
+      # Allow web container to run ANNOVAR via sibling docker image (optional)
+      - ${DOCKER_SOCK:-/var/run/docker.sock}:/var/run/docker.sock
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health/live"]

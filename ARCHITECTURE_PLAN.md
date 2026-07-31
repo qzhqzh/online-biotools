@@ -4,7 +4,9 @@
 > 产品目标：统一网页入口 + REST API；VEP 与 ANNOVAR 最终同等接入。  
 > **技术栈定版**：后端 **Django + Django REST framework**；部署 **Docker Compose**；前端 **Django Template 壳 + React（Vite 产出静态资源）**，UI 风格采用 **shadcn/ui**，变异/脚本编辑采用 **Monaco Editor**；不建独立 SPA 部署仓库，页面路由仍归 Django。  
 > **落地顺序**：先止血与数据治理 → 用 Django/DRF 重建权威入口并迁入 VEP → Template + shadcn/Monaco 工具页 → 再扩展 ANNOVAR。  
-> **实施进度（功能分支 `refactor/architecture-django-drf`）**：Django/DRF/Compose 与 VEP 迁入已在 `main`；本分支补齐 `frontend/`（Vite + shadcn/ui + Monaco）与多阶段 Docker 构建，工具页挂载于 `/tools/annotate/`。
+> **实施进度（功能分支 `refactor/architecture-django-drf`）**  
+> - 已完成：Git 基线、Django+DRF+Compose、VEP 迁入、Template+Vite+shadcn/ui+Monaco 工具页、ANNOVAR 引擎适配（local/docker）、legacy 目录收纳。  
+> - 未完成/后续：生产鉴权与限流（阶段 4）、115→116 GRCh38 cache 正式切换后删除 `legacy/online-vep` 大数据、ANNOVAR 授权合规确认、可选异步作业。
 
 ---
 

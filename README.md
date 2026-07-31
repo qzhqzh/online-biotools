@@ -7,7 +7,20 @@
 - 后端：Django + Django REST framework
 - 启动：Docker Compose（gunicorn）
 - 前端：Django Template + React/Vite + **shadcn/ui** + **Monaco Editor**（`frontend/`）
-- 引擎：VEP 116（已接入）；ANNOVAR（待服务化）
+- 引擎：VEP 116；ANNOVAR（本地 perl 或 docker CLI）
+
+## 目录约定
+
+- **权威代码**：根目录 Django / `frontend/` / `scripts/`
+- **遗留实验**：[`legacy/`](legacy/README.md)（FastAPI/CLI 沙箱，勿继续扩展）
+- **数据不进 Git**：`data/`（可用软链指向 legacy cache/humandb）
+
+建议软链（本机已有数据时）：
+
+```bash
+ln -sfn "$(pwd)/legacy/online-tool/online-vep/cache" data/vep
+ln -sfn "$(pwd)/legacy/online-annovar/humandb" data/annovar-hg38
+```
 
 ## 本地开发
 
@@ -18,36 +31,22 @@ pip install -r requirements-dev.txt
 python manage.py migrate
 python manage.py test apps.annotations
 
-# 前端（首次）
 cd frontend && npm install && npm run build && cd ..
-
 python manage.py runserver 8000
-# 打开 http://127.0.0.1:8000/tools/annotate/
+# http://127.0.0.1:8000/tools/annotate/
 ```
 
-前端热更新（可选）：另开终端 `cd frontend && npm run dev`（已代理 `/api` 到 8000）。
+ANNOVAR（宿主机）：需 docker 与镜像，或设置 `ANNOVAR_MODE=local` 指向本机 `table_annovar.pl`。
 
-## Docker Compose（含 VEP）
-
-若已有遗留 GRCh37 cache，可直接挂载：
+## Docker Compose
 
 ```bash
-export VEP_HOST_CACHE=./online-tool/online-vep/cache
+export VEP_HOST_CACHE=./legacy/online-tool/online-vep/cache
+export ANNOVAR_HOST_DB=./legacy/online-annovar/humandb
 docker compose up -d --build
-curl http://localhost:8000/health/live
+curl http://localhost:8000/health/ready
 curl http://localhost:8000/api/v1/engines/
 ```
-
-打开 http://localhost:8000/tools/annotate/ 使用 shadcn + Monaco 工具页。
-
-或下载到 `./data/vep`：
-
-```bash
-bash scripts/download_vep_cache.sh merged GRCh37
-docker compose up -d --build
-```
-
-### 注释示例
 
 ```bash
 curl -s -X POST http://localhost:8000/api/v1/annotations/ \
@@ -55,8 +54,8 @@ curl -s -X POST http://localhost:8000/api/v1/annotations/ \
   -d '{"engine":"vep","assembly":"GRCh37","variants":["17:43092951 G>A"]}'
 ```
 
-无对应 assembly cache 时返回 **503**（不再假装支持）。
+无对应 cache/db 时返回 **503**。
 
 ## 安全提示
 
-本地若曾有 `wget-log*` 含云凭证，请轮换 AccessKey；此类文件已被 `.gitignore` 排除。
+勿提交 `wget-log*` / AccessKey；大数据目录已在 `.gitignore`。ANNOVAR 授权需自行确认后再对外暴露。

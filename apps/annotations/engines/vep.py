@@ -7,7 +7,6 @@ import os
 import subprocess
 import tempfile
 import threading
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +18,7 @@ from apps.annotations.engines.base import (
     EngineTimeout,
     UnsupportedAssembly,
 )
+from apps.annotations.engines.results import VariantResult
 from apps.annotations.normalize import normalize_variant
 
 _vep_semaphore: threading.Semaphore | None = None
@@ -31,37 +31,6 @@ def _semaphore() -> threading.Semaphore:
         if _vep_semaphore is None:
             _vep_semaphore = threading.Semaphore(settings.VEP_MAX_CONCURRENCY)
         return _vep_semaphore
-
-
-@dataclass
-class VariantResult:
-    input: str
-    allele: str | None = None
-    gene: str | None = None
-    feature: str | None = None
-    consequence: str | None = None
-    impact: str | None = None
-    cdot: str | None = None
-    protein: str | None = None
-    biotype: str | None = None
-    canonical: str | None = None
-    engine: str = "vep"
-
-    def as_dict(self) -> dict[str, Any]:
-        return {
-            "input": self.input,
-            "allele": self.allele,
-            "gene": self.gene,
-            "feature": self.feature,
-            "consequence": self.consequence,
-            "impact": self.impact,
-            "cdot": self.cdot,
-            "protein": self.protein,
-            "biotype": self.biotype,
-            "canonical": self.canonical,
-            "engine": self.engine,
-            "details": {"vep": {}},
-        }
 
 
 def cache_root() -> Path:
@@ -115,7 +84,7 @@ def parse_vep_output(
         transcript_consequences = entry.get("transcript_consequences", [])
 
         if not transcript_consequences:
-            results.append(VariantResult(input=display_input))
+            results.append(VariantResult(input=display_input, engine="vep"))
             continue
 
         tc = transcript_consequences[0]
@@ -131,6 +100,8 @@ def parse_vep_output(
                 protein=tc.get("hgvsp"),
                 biotype=tc.get("biotype"),
                 canonical=("YES" if tc.get("canonical") == 1 else None),
+                engine="vep",
+                details={"vep": {"transcript_consequence": tc}},
             )
         )
     return results

@@ -107,3 +107,21 @@ VEP_ASSEMBLY_CACHE = {
     "GRCh37": os.environ.get("VEP_CACHE_GRCh37", "homo_sapiens_merged/116_GRCh37"),
     "GRCh38": os.environ.get("VEP_CACHE_GRCh38", "homo_sapiens_merged/116_GRCh38"),
 }
+
+# ANNOVAR (local perl or dockerized CLI)
+ANNOVAR_MODE = os.environ.get("ANNOVAR_MODE", "auto")  # auto|local|docker
+ANNOVAR_DB_DIR = os.environ.get(
+    "ANNOVAR_DB_DIR",
+    str(BASE_DIR / "data" / "annovar-hg38"),
+)
+ANNOVAR_TABLE_BIN = os.environ.get(
+    "ANNOVAR_TABLE_BIN",
+    "/home/TOOLS/tools/annovar/current/bin/table_annovar.pl",
+)
+ANNOVAR_DOCKER_IMAGE = os.environ.get(
+    "ANNOVAR_DOCKER_IMAGE",
+    "registry.cn-shanghai.aliyuncs.com/kszy-biosoft/annovar:v20180416_2",
+)
+ANNOVAR_TIMEOUT_SECONDS = int(os.environ.get("ANNOVAR_TIMEOUT_SECONDS", "300"))
+ANNOVAR_MAX_CONCURRENCY = int(os.environ.get("ANNOVAR_MAX_CONCURRENCY", "1"))
+ANNOVAR_VERSION_LABEL = os.environ.get("ANNOVAR_VERSION_LABEL", "2018-04-16")

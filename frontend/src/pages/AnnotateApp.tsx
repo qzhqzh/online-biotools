@@ -40,8 +40,11 @@ export default function AnnotateApp() {
     fetchEngines()
       .then((list) => {
         setEngines(list)
-        const vep = list.find((e) => e.id === "vep")
-        if (vep?.default_assembly) setAssembly(vep.default_assembly)
+        const preferred = list.find((e) => e.ready) || list[0]
+        if (preferred) {
+          setEngine(preferred.id)
+          if (preferred.default_assembly) setAssembly(preferred.default_assembly)
+        }
       })
       .catch((err: Error) => setError(err.message))
   }, [])
@@ -102,10 +105,13 @@ export default function AnnotateApp() {
                 <SelectValue placeholder="选择引擎" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="vep">VEP</SelectItem>
-                <SelectItem value="annovar" disabled>
-                  ANNOVAR（未接入）
-                </SelectItem>
+                {engines.map((item) => (
+                  <SelectItem key={item.id} value={item.id}>
+                    {item.name}
+                    {item.ready ? "" : "（未就绪）"}
+                  </SelectItem>
+                ))}
+                <SelectItem value="both">VEP + ANNOVAR</SelectItem>
               </SelectContent>
             </Select>
           </div>

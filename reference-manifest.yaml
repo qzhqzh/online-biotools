@@ -1,5 +1,4 @@
-# Reference data / engine compatibility matrix (draft)
-# Large files are NOT in git; download via scripts/.
+# Reference data / engine compatibility matrix
 
 engines:
   vep:
@@ -9,19 +8,25 @@ engines:
       GRCh37:
         cache_subdir: "homo_sapiens_merged/116_GRCh37"
         download_script: "scripts/download_vep_cache.sh merged GRCh37"
-        status: "available_locally_via_legacy_path"
-        legacy_path: "online-tool/online-vep/cache/homo_sapiens_merged/116_GRCh37"
+        legacy_path: "legacy/online-tool/online-vep/cache/homo_sapiens_merged/116_GRCh37"
       GRCh38:
         cache_subdir: "homo_sapiens_merged/116_GRCh38"
         download_script: "scripts/download_vep_cache.sh merged GRCh38"
-        status: "not_provisioned_yet"
+        status: "download_when_needed"
   annovar:
+    version_label: "2018-04-16"
     image_hint: "registry.cn-shanghai.aliyuncs.com/kszy-biosoft/annovar:v20180416_2"
+    table_bin_in_image: "/home/TOOLS/tools/annovar/current/bin/table_annovar.pl"
     assemblies:
-      hg38:
-        db_subdir: "annovar/hg38"
-        status: "legacy_humandb_only"
-        license_note: "Confirm redistribution/online-service rights before exposing API"
+      GRCh38:
+        buildver: hg38
+        db_path_env: ANNOVAR_DB_DIR
+        legacy_path: "legacy/online-annovar/humandb"
+      GRCh37:
+        buildver: hg19
+        status: "db_not_bundled_here"
+    license_note: "Confirm redistribution/online-service rights before public exposure"
 
-data_root_env: "VEP_CACHE_DIR / ANNOVAR_DB_DIR"
-compose_mount_example: "./data:/data"
+data_links:
+  - "data/vep -> legacy/online-tool/online-vep/cache"
+  - "data/annovar-hg38 -> legacy/online-annovar/humandb"
