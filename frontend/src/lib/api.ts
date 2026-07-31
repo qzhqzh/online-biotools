@@ -6,6 +6,7 @@ export type EngineInfo = {
   ready_assemblies: string[]
   ready: boolean
   default_assembly: string
+  disabled_reason?: string
 }
 
 export type VariantResult = {
@@ -22,9 +23,31 @@ export type VariantResult = {
   engine?: string
 }
 
+const API_KEY_STORAGE = "biotools_api_key"
+
+export function getApiKey(): string {
+  return localStorage.getItem(API_KEY_STORAGE) || ""
+}
+
+export function setApiKey(key: string) {
+  if (key) localStorage.setItem(API_KEY_STORAGE, key)
+  else localStorage.removeItem(API_KEY_STORAGE)
+}
+
 function csrfToken(): string | undefined {
   const match = document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)
   return match ? decodeURIComponent(match[1]) : undefined
+}
+
+function authHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  }
+  const token = csrfToken()
+  if (token) headers["X-CSRFToken"] = token
+  const apiKey = getApiKey()
+  if (apiKey) headers["X-API-Key"] = apiKey
+  return headers
 }
 
 export async function fetchEngines(): Promise<EngineInfo[]> {
@@ -39,15 +62,9 @@ export async function annotateVariants(payload: {
   assembly: string
   variants: string[]
 }): Promise<{ assembly: string; engine: string; results: VariantResult[] }> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  }
-  const token = csrfToken()
-  if (token) headers["X-CSRFToken"] = token
-
   const res = await fetch("/api/v1/annotations/", {
     method: "POST",
-    headers,
+    headers: authHeaders(),
     body: JSON.stringify(payload),
   })
   const data = await res.json()

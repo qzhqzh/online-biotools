@@ -5,9 +5,9 @@
 > **技术栈定版**：后端 **Django + Django REST framework**；部署 **Docker Compose**；前端 **Django Template 壳 + React（Vite 产出静态资源）**，UI 风格采用 **shadcn/ui**，变异/脚本编辑采用 **Monaco Editor**；不建独立 SPA 部署仓库，页面路由仍归 Django。  
 > **落地顺序**：先止血与数据治理 → 用 Django/DRF 重建权威入口并迁入 VEP → Template + shadcn/Monaco 工具页 → 再扩展 ANNOVAR。  
 > **实施进度（功能分支 `refactor/architecture-django-drf`）**  
-> - 已完成：Git 基线、Django+DRF+Compose、VEP 迁入、Template+Vite+**完整 shadcn/ui 原版主题**+**Monaco Editor（VCF 输入）**、ANNOVAR 引擎适配、legacy 收纳。  
+> - 已完成：Git 基线、Django+DRF+Compose、VEP/ANNOVAR、shadcn Sidebar 全站布局、Monaco VCF 输入、**阶段 4 生产硬化**（API Key、限流、request_id 日志、ANNOVAR 授权闸门、部署文档）、legacy 重复 tar 清理。  
 > - UI 约定：默认使用 shadcn 官方 neutral 主题；无用户明确要求不做个性化换肤。  
-> - 未完成/后续：生产鉴权与限流（阶段 4）、删除 legacy 大数据、ANNOVAR 授权确认、可选异步作业。
+> - 仍可选：彻底删除 `legacy/online-vep` 解压 cache（待 116/GRCh38 验收）、SSO、异步作业（阶段 5）。
 
 ---
 

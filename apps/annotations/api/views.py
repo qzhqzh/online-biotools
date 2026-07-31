@@ -2,6 +2,8 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.annotations.api.auth import APIKeyAuthentication
+from apps.annotations.api.permissions import AnnotationRateThrottle, HasAPIKeyOrOpen
 from apps.annotations.api.serializers import (
     AnnotationRequestSerializer,
     AnnotationResponseSerializer,
@@ -19,8 +21,9 @@ class EnginesView(APIView):
 
 
 class AnnotationsView(APIView):
-    authentication_classes = []
-    permission_classes = []
+    authentication_classes = [APIKeyAuthentication]
+    permission_classes = [HasAPIKeyOrOpen]
+    throttle_classes = [AnnotationRateThrottle]
 
     def post(self, request):
         ser = AnnotationRequestSerializer(data=request.data)
@@ -41,10 +44,12 @@ class AnnotationsView(APIView):
         return Response(out.data, status=status.HTTP_200_OK)
 
 
-# Legacy FastAPI-compatible alias
 class LegacyAnnotateView(APIView):
-    authentication_classes = []
-    permission_classes = []
+    """Deprecated FastAPI-compatible alias; same auth as AnnotationsView."""
+
+    authentication_classes = [APIKeyAuthentication]
+    permission_classes = [HasAPIKeyOrOpen]
+    throttle_classes = [AnnotationRateThrottle]
 
     def post(self, request):
         payload = {

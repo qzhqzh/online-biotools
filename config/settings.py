@@ -32,6 +32,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "apps.annotations.middleware.RequestContextMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -92,6 +93,48 @@ REST_FRAMEWORK = {
         "rest_framework.parsers.JSONParser",
     ],
     "UNAUTHENTICATED_USER": None,
+    "DEFAULT_THROTTLE_RATES": {
+        "annotation": os.environ.get("BIOTOOLS_ANNOTATION_RATE", "30/min"),
+    },
+}
+
+# Request limits
+DATA_UPLOAD_MAX_MEMORY_SIZE = int(
+    os.environ.get("DATA_UPLOAD_MAX_MEMORY_SIZE", str(2 * 1024 * 1024))
+)
+DATA_UPLOAD_MAX_NUMBER_FIELDS = int(os.environ.get("DATA_UPLOAD_MAX_NUMBER_FIELDS", "1000"))
+
+# Auth / ops
+# Comma-separated keys. When non-empty (or BIOTOOLS_REQUIRE_API_KEY=1), POST annotate requires X-API-Key.
+BIOTOOLS_API_KEYS = os.environ.get("BIOTOOLS_API_KEYS", "")
+BIOTOOLS_REQUIRE_API_KEY = os.environ.get("BIOTOOLS_REQUIRE_API_KEY", "0") == "1"
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "structured": {
+            "format": "%(asctime)s level=%(levelname)s logger=%(name)s %(message)s",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "structured",
+        },
+    },
+    "loggers": {
+        "biotools.access": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "django.request": {
+            "handlers": ["console"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+    },
 }
 
 # --- Annotation engines ---
@@ -125,3 +168,5 @@ ANNOVAR_DOCKER_IMAGE = os.environ.get(
 ANNOVAR_TIMEOUT_SECONDS = int(os.environ.get("ANNOVAR_TIMEOUT_SECONDS", "300"))
 ANNOVAR_MAX_CONCURRENCY = int(os.environ.get("ANNOVAR_MAX_CONCURRENCY", "1"))
 ANNOVAR_VERSION_LABEL = os.environ.get("ANNOVAR_VERSION_LABEL", "2018-04-16")
+# Gate public/online ANNOVAR usage until license is confirmed by the operator.
+ANNOVAR_PUBLIC_ENABLED = os.environ.get("ANNOVAR_PUBLIC_ENABLED", "0") == "1"

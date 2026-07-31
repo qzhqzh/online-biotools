@@ -12,13 +12,30 @@ from apps.annotations.engines.base import AnnotationError
 
 
 def list_engines() -> list[dict[str, Any]]:
-    return [vep_engine.engine_info(), annovar_engine.engine_info()]
+    engines = [vep_engine.engine_info()]
+    ann = annovar_engine.engine_info()
+    if not settings.ANNOVAR_PUBLIC_ENABLED:
+        ann = {
+            **ann,
+            "ready": False,
+            "ready_assemblies": [],
+            "disabled_reason": "ANNOVAR_PUBLIC_ENABLED=0 (confirm license before enabling)",
+        }
+    engines.append(ann)
+    return engines
 
 
 def _run_one(engine: str, variants: list[str], assembly: str) -> list[dict[str, Any]]:
     if engine == "vep":
         return [r.as_dict() for r in vep_engine.run_vep(variants, assembly)]
     if engine == "annovar":
+        if not settings.ANNOVAR_PUBLIC_ENABLED:
+            raise AnnotationError(
+                "ANNOVAR is disabled until ANNOVAR_PUBLIC_ENABLED=1 "
+                "(confirm redistribution/online-service license first)",
+                status_code=403,
+                code="annovar_license_gate",
+            )
         return [r.as_dict() for r in annovar_engine.run_annovar(variants, assembly)]
     raise AnnotationError(
         f"Unknown engine: {engine}",

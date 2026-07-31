@@ -75,9 +75,16 @@ export default function EnginesApp() {
                       {engine.ready_assemblies.join(", ") || "—"}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={engine.ready ? "default" : "secondary"}>
-                        {engine.ready ? "Ready" : "Not ready"}
-                      </Badge>
+                      <div className="space-y-1">
+                        <Badge variant={engine.ready ? "default" : "secondary"}>
+                          {engine.ready ? "Ready" : "Not ready"}
+                        </Badge>
+                        {engine.disabled_reason ? (
+                          <p className="text-xs text-muted-foreground">
+                            {engine.disabled_reason}
+                          </p>
+                        ) : null}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

@@ -58,4 +58,6 @@ curl -s -X POST http://localhost:8000/api/v1/annotations/ \
 
 ## 安全提示
 
-勿提交 `wget-log*` / AccessKey；大数据目录已在 `.gitignore`。ANNOVAR 授权需自行确认后再对外暴露。
+勿提交 `wget-log*` / AccessKey；大数据目录已在 `.gitignore`。  
+生产请配置 `BIOTOOLS_API_KEYS`，详见 [docs/DEPLOY.md](docs/DEPLOY.md)。  
+ANNOVAR 默认关闭（`ANNOVAR_PUBLIC_ENABLED=0`），授权确认后再开启。

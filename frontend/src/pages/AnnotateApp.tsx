@@ -13,6 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
   Select,
@@ -34,6 +35,8 @@ import { AppShell } from "@/layouts/AppShell"
 import {
   annotateVariants,
   fetchEngines,
+  getApiKey,
+  setApiKey,
   type EngineInfo,
   type VariantResult,
 } from "@/lib/api"
@@ -51,12 +54,14 @@ export default function AnnotateApp() {
   const [engine, setEngine] = useState("vep")
   const [assembly, setAssembly] = useState("GRCh37")
   const [text, setText] = useState(SAMPLE_LINES)
+  const [apiKey, setApiKeyState] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [results, setResults] = useState<VariantResult[]>([])
   const [rawJson, setRawJson] = useState("")
 
   useEffect(() => {
+    setApiKeyState(getApiKey())
     fetchEngines()
       .then((list) => {
         setEngines(list)
@@ -133,6 +138,39 @@ export default function AnnotateApp() {
         </>
       }
     >
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">API Key（生产环境）</CardTitle>
+          <CardDescription>
+            当服务配置了 <code>BIOTOOLS_API_KEYS</code> 时，注释请求需携带{" "}
+            <code>X-API-Key</code>。密钥仅保存在本机浏览器 localStorage。
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <div className="w-full space-y-2 sm:max-w-md">
+            <Label htmlFor="api-key">X-API-Key</Label>
+            <Input
+              id="api-key"
+              type="password"
+              autoComplete="off"
+              placeholder="可选：未配置服务端密钥时可留空"
+              value={apiKey}
+              onChange={(e) => setApiKeyState(e.target.value)}
+            />
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              setApiKey(apiKey.trim())
+              toast.success(apiKey.trim() ? "API Key 已保存到本机" : "已清除本机 API Key")
+            }}
+          >
+            保存
+          </Button>
+        </CardContent>
+      </Card>
+
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
         <Card className="overflow-hidden">
           <CardHeader>

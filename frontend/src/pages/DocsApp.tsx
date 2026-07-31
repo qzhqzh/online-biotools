@@ -63,18 +63,27 @@ export default function DocsApp() {
         <Card>
           <CardHeader>
             <CardTitle>注释请求示例</CardTitle>
-            <CardDescription>Content-Type: application/json</CardDescription>
+            <CardDescription>
+              生产环境请配置 <code>BIOTOOLS_API_KEYS</code>，并带上{" "}
+              <code>X-API-Key</code>。
+            </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <pre className="overflow-x-auto rounded-lg border bg-muted/40 p-4 text-xs leading-relaxed">
 {`curl -X POST http://<host>:8800/api/v1/annotations/ \\
   -H 'Content-Type: application/json' \\
+  -H 'X-API-Key: YOUR_KEY' \\
   -d '{
     "engine": "vep",
     "assembly": "GRCh37",
     "variants": ["17:43092951 G>A"]
   }'`}
             </pre>
+            <p className="text-sm text-muted-foreground">
+              ANNOVAR 默认关闭（<code>ANNOVAR_PUBLIC_ENABLED=0</code>
+              ），确认授权后再开启。部署细节见仓库{" "}
+              <code>docs/DEPLOY.md</code>。
+            </p>
           </CardContent>
         </Card>
       </div>

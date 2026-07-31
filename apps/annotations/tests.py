@@ -105,7 +105,13 @@ class ApiSmokeTests(SimpleTestCase):
         )
         self.assertEqual(resp.status_code, 400)
 
-    @override_settings(ANNOVAR_MODE="local", ANNOVAR_TABLE_BIN="/nonexistent/table_annovar.pl")
+    @override_settings(
+        ANNOVAR_PUBLIC_ENABLED=True,
+        ANNOVAR_MODE="local",
+        ANNOVAR_TABLE_BIN="/nonexistent/table_annovar.pl",
+        BIOTOOLS_API_KEYS="",
+        BIOTOOLS_REQUIRE_API_KEY=False,
+    )
     def test_annovar_not_ready_returns_503(self):
         resp = self.client.post(
             "/api/v1/annotations/",
@@ -117,3 +123,35 @@ class ApiSmokeTests(SimpleTestCase):
             content_type="application/json",
         )
         self.assertEqual(resp.status_code, 503)
+
+    @override_settings(ANNOVAR_PUBLIC_ENABLED=False, BIOTOOLS_API_KEYS="", BIOTOOLS_REQUIRE_API_KEY=False)
+    def test_annovar_license_gate_returns_403(self):
+        resp = self.client.post(
+            "/api/v1/annotations/",
+            data={
+                "engine": "annovar",
+                "assembly": "GRCh38",
+                "variants": ["17:43092951 G>A"],
+            },
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 403)
+
+    @override_settings(BIOTOOLS_API_KEYS="secret-key", BIOTOOLS_REQUIRE_API_KEY=False)
+    def test_annotations_require_api_key(self):
+        resp = self.client.post(
+            "/api/v1/annotations/",
+            data={
+                "engine": "vep",
+                "assembly": "GRCh37",
+                "variants": ["17:43092951 G>A"],
+            },
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 403)
+
+    @override_settings(BIOTOOLS_API_KEYS="secret-key", BIOTOOLS_REQUIRE_API_KEY=False)
+    def test_request_id_header_present(self):
+        resp = self.client.get("/health/live")
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.headers.get("X-Request-ID"))
