@@ -1,14 +1,16 @@
-"""Background annotation jobs."""
+"""Durable background annotation jobs backed by the database."""
 
 from __future__ import annotations
 
 import logging
-import threading
+import math
+import time
+from datetime import timedelta
 from typing import Any
 
 from django.conf import settings
 from django.core.cache import cache
-from django.db import close_old_connections
+from django.db import close_old_connections, transaction
 from django.utils import timezone
 
 from apps.annotations.engines.base import AnnotationError
@@ -33,23 +35,46 @@ def submit_cooldown_seconds() -> int:
 def _client_ident(request) -> str:
     if getattr(request, "auth", None):
         return f"key:{str(request.auth)[:24]}"
-    # Prefer X-Forwarded-For first hop when behind proxy
-    forwarded = request.META.get("HTTP_X_FORWARDED_FOR", "")
-    if forwarded:
-        return f"ip:{forwarded.split(',')[0].strip()}"
+
+    # X-Forwarded-For is attacker-controlled unless the deployment explicitly
+    # opts in after placing Django behind a trusted reverse proxy.
+    if getattr(settings, "BIOTOOLS_TRUST_X_FORWARDED_FOR", False):
+        forwarded = request.META.get("HTTP_X_FORWARDED_FOR", "")
+        if forwarded:
+            return f"ip:{forwarded.split(',')[0].strip()}"
+
     return f"ip:{request.META.get('REMOTE_ADDR', 'unknown')}"
 
 
+def _retry_after(value: Any, default_seconds: int) -> int:
+    try:
+        remaining = math.ceil(float(value) - time.time())
+    except (TypeError, ValueError):
+        remaining = default_seconds
+    return max(1, remaining)
+
+
 def check_submit_cooldown(request) -> None:
+    """Apply a backend-portable, race-safe submission cooldown.
+
+    Django's default LocMemCache does not expose ``ttl()``. Store the expiry
+    timestamp as the value and use ``cache.add`` so all standard Django cache
+    backends can enforce the cooldown atomically.
+    """
+
     seconds = submit_cooldown_seconds()
     if seconds <= 0:
         return
+
     key = _SUBMIT_CACHE_PREFIX + _client_ident(request)
-    if cache.get(key):
-        ttl = cache.ttl(key) if hasattr(cache, "ttl") else None
-        retry = int(ttl) if ttl and ttl > 0 else seconds
-        raise JobSubmitTooSoon(retry)
-    cache.set(key, 1, timeout=seconds)
+    existing = cache.get(key)
+    if existing is not None:
+        raise JobSubmitTooSoon(_retry_after(existing, seconds))
+
+    expires_at = time.time() + seconds
+    if not cache.add(key, expires_at, timeout=seconds):
+        existing = cache.get(key)
+        raise JobSubmitTooSoon(_retry_after(existing, seconds))
 
 
 def create_and_enqueue(
@@ -58,31 +83,81 @@ def create_and_enqueue(
     assembly: str,
     engines: list[str],
 ) -> AnnotationJob:
-    job = AnnotationJob.objects.create(
+    """Persist a queued job for the independent worker process.
+
+    The legacy function name is retained for API compatibility. No daemon
+    thread is started inside the web worker, so Gunicorn recycling cannot lose
+    an in-flight task.
+    """
+
+    return AnnotationJob.objects.create(
         status=AnnotationJob.Status.QUEUED,
         assembly=assembly,
         engines=engines,
         variants=variants,
         variant_count=len(variants),
     )
-    thread = threading.Thread(
-        target=_run_job_safe,
-        args=(str(job.id),),
-        name=f"annotate-job-{job.id}",
-        daemon=True,
+
+
+def claim_next_job() -> str | None:
+    """Atomically move the oldest queued job to RUNNING and return its id."""
+
+    with transaction.atomic():
+        job_id = (
+            AnnotationJob.objects.filter(status=AnnotationJob.Status.QUEUED)
+            .order_by("created_at")
+            .values_list("pk", flat=True)
+            .first()
+        )
+        if job_id is None:
+            return None
+
+        claimed = AnnotationJob.objects.filter(
+            pk=job_id,
+            status=AnnotationJob.Status.QUEUED,
+        ).update(
+            status=AnnotationJob.Status.RUNNING,
+            started_at=timezone.now(),
+            finished_at=None,
+            error="",
+            result=None,
+        )
+
+    return str(job_id) if claimed else None
+
+
+def recover_stale_jobs(stale_after_seconds: int | None = None) -> int:
+    """Requeue jobs left RUNNING by a terminated worker process."""
+
+    seconds = stale_after_seconds
+    if seconds is None:
+        seconds = int(getattr(settings, "BIOTOOLS_JOB_STALE_AFTER_SECONDS", 1800))
+    seconds = max(60, int(seconds))
+    cutoff = timezone.now() - timedelta(seconds=seconds)
+    return AnnotationJob.objects.filter(
+        status=AnnotationJob.Status.RUNNING,
+        started_at__lt=cutoff,
+    ).update(
+        status=AnnotationJob.Status.QUEUED,
+        started_at=None,
+        finished_at=None,
+        error="",
     )
-    thread.start()
-    return job
 
 
-def _run_job_safe(job_id: str) -> None:
+def run_job_safe(job_id: str) -> None:
+    """Execute one already-claimed job and persist a terminal state."""
+
     close_old_connections()
     try:
         _run_job(job_id)
     except Exception:
         logger.exception("job runner crashed job_id=%s", job_id)
         try:
-            AnnotationJob.objects.filter(pk=job_id).update(
+            AnnotationJob.objects.filter(
+                pk=job_id,
+                status=AnnotationJob.Status.RUNNING,
+            ).update(
                 status=AnnotationJob.Status.FAILED,
                 error="内部任务执行异常",
                 finished_at=timezone.now(),
@@ -95,16 +170,14 @@ def _run_job_safe(job_id: str) -> None:
 
 def _run_job(job_id: str) -> None:
     try:
-        job = AnnotationJob.objects.get(pk=job_id)
+        job = AnnotationJob.objects.get(
+            pk=job_id,
+            status=AnnotationJob.Status.RUNNING,
+        )
     except AnnotationJob.DoesNotExist:
         return
 
-    job.status = AnnotationJob.Status.RUNNING
-    job.started_at = timezone.now()
-    job.save(update_fields=["status", "started_at"])
-
     runs: list[dict[str, Any]] = []
-    fatal: str | None = None
 
     for engine in job.engines:
         try:
@@ -140,21 +213,35 @@ def _run_job(job_id: str) -> None:
                 }
             )
 
-    ok_count = sum(1 for r in runs if r.get("status") == "ok")
-    if ok_count == 0:
-        job.status = AnnotationJob.Status.FAILED
-        fatal = "；".join(
-            f"{r.get('engine')}: {r.get('error')}" for r in runs if r.get("error")
-        ) or "全部引擎失败"
-        job.error = fatal[:2000]
-        job.result = {"assembly": job.assembly, "runs": runs}
-    else:
-        job.status = AnnotationJob.Status.SUCCEEDED
-        job.error = ""
-        job.result = {"assembly": job.assembly, "runs": runs}
+    ok_count = sum(1 for run in runs if run.get("status") == "ok")
+    result = {"assembly": job.assembly, "runs": runs}
+    finished_at = timezone.now()
 
-    job.finished_at = timezone.now()
-    job.save(update_fields=["status", "error", "result", "finished_at"])
+    if ok_count == 0:
+        fatal = "；".join(
+            f"{run.get('engine')}: {run.get('error')}"
+            for run in runs
+            if run.get("error")
+        ) or "全部引擎失败"
+        AnnotationJob.objects.filter(
+            pk=job_id,
+            status=AnnotationJob.Status.RUNNING,
+        ).update(
+            status=AnnotationJob.Status.FAILED,
+            error=fatal[:2000],
+            result=result,
+            finished_at=finished_at,
+        )
+    else:
+        AnnotationJob.objects.filter(
+            pk=job_id,
+            status=AnnotationJob.Status.RUNNING,
+        ).update(
+            status=AnnotationJob.Status.SUCCEEDED,
+            error="",
+            result=result,
+            finished_at=finished_at,
+        )
 
 
 def job_to_dict(job: AnnotationJob, *, include_result: bool = True) -> dict[str, Any]:
@@ -174,7 +261,6 @@ def job_to_dict(job: AnnotationJob, *, include_result: bool = True) -> dict[str,
         data["result"] = job.result
     else:
         data["result"] = None
-        # Compact preview for list views
         data["variants_preview"] = (job.variants or [])[:3]
     return data
 
