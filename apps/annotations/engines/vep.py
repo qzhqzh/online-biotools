@@ -55,7 +55,6 @@ def is_assembly_ready(assembly: str) -> bool:
     path = assembly_cache_path(assembly)
     if path is None or not path.is_dir():
         return False
-    # Expect info.txt inside Ensembl cache layout
     return (path / "info.txt").is_file() or any(path.iterdir())
 
 
@@ -64,7 +63,7 @@ def supported_assemblies() -> list[str]:
 
 
 def ready_assemblies() -> list[str]:
-    return [a for a in supported_assemblies() if is_assembly_ready(a)]
+    return [assembly for assembly in supported_assemblies() if is_assembly_ready(assembly)]
 
 
 def local_bin_ready() -> bool:
@@ -90,12 +89,11 @@ def _use_docker() -> bool:
         return True
     if mode == "local":
         return False
-    # auto: prefer local binary when present
     return not local_bin_ready()
 
 
 def _parse_cache_info(path: Path) -> dict[str, str]:
-    """Parse Ensembl VEP cache info.txt (key\\tvalue lines)."""
+    """Parse Ensembl VEP cache info.txt (key\tvalue lines)."""
     meta: dict[str, str] = {}
     if not path.is_file():
         return meta
@@ -119,7 +117,6 @@ def assembly_meta(assembly: str) -> dict[str, Any]:
     ready = is_assembly_ready(assembly)
     info = _parse_cache_info(path / "info.txt") if path else {}
     cache_label = Path(rel).name if rel else assembly
-    # Prefer explicit cache dir label (e.g. 116_GRCh37)
     software = "116"
     if "_" in cache_label:
         software = cache_label.split("_", 1)[0]
@@ -160,7 +157,13 @@ def engine_info() -> dict[str, Any]:
     }
 
 
-def _tc_to_hit(tc: dict[str, Any], *, preferred: bool, source_index: int, mane_rank: int) -> dict[str, Any]:
+def _tc_to_hit(
+    tc: dict[str, Any],
+    *,
+    preferred: bool,
+    source_index: int,
+    mane_rank: int,
+) -> dict[str, Any]:
     mane_status = None
     if mane_rank == 0:
         mane_status = "select"
@@ -199,34 +202,44 @@ def parse_vep_output(
             continue
 
         scored: list[tuple[tuple, int, int, dict[str, Any]]] = []
-        for idx, tc in enumerate(transcript_consequences):
-            mrank = mane_rank_from_vep_tc(tc)
-            is_canon = tc.get("canonical") == 1
-            refseq = is_refseq_accession(tc.get("transcript_id"))
+        for index, consequence in enumerate(transcript_consequences):
+            mane_rank = mane_rank_from_vep_tc(consequence)
+            is_canonical = consequence.get("canonical") == 1
+            refseq = is_refseq_accession(consequence.get("transcript_id"))
             scored.append(
                 (
                     sort_key_for_transcript(
-                        mrank, is_canon, idx, refseq=refseq
+                        mane_rank,
+                        is_canonical,
+                        index,
+                        refseq=refseq,
                     ),
-                    mrank,
-                    idx,
-                    tc,
+                    mane_rank,
+                    index,
+                    consequence,
                 )
             )
 
-        scored.sort(key=lambda x: x[0])
-        _key, best_rank, _best_idx, preferred_tc = scored[0]
-        is_canon = preferred_tc.get("canonical") == 1
+        scored.sort(key=lambda item: item[0])
+        _key, best_rank, _best_index, preferred_tc = scored[0]
+        is_canonical = preferred_tc.get("canonical") == 1
         preferred_refseq = is_refseq_accession(preferred_tc.get("transcript_id"))
         pick_reason = pick_reason_for_rank(
             best_rank,
-            canonical=is_canon and best_rank >= 100,
+            canonical=is_canonical and best_rank >= 100,
             refseq=preferred_refseq,
         )
 
         transcripts = [
-            _tc_to_hit(tc, preferred=(i == 0), source_index=idx, mane_rank=mrank)
-            for i, (_k, mrank, idx, tc) in enumerate(scored)
+            _tc_to_hit(
+                consequence,
+                preferred=(position == 0),
+                source_index=source_index,
+                mane_rank=mane_rank,
+            )
+            for position, (_key, mane_rank, source_index, consequence) in enumerate(
+                scored
+            )
         ]
 
         results.append(
@@ -240,7 +253,7 @@ def parse_vep_output(
                 cdot=preferred_tc.get("hgvsc"),
                 protein=preferred_tc.get("hgvsp"),
                 biotype=preferred_tc.get("biotype"),
-                canonical="YES" if best_rank < 100 or is_canon else None,
+                canonical="YES" if best_rank < 100 or is_canonical else None,
                 engine="vep",
                 transcripts=transcripts,
                 details={
@@ -259,9 +272,35 @@ def parse_vep_output(
     return results
 
 
-def _vep_cli_args(assembly: str, input_path: str, output_path: str, dir_cache: str) -> list[str]:
-    # No --pick: return all transcript consequences for auxiliary inspection.
-    # --mane / --canonical flag preferred core transcript in parse_vep_output.
+def _load_json_lines(path: Path) -> list[dict[str, Any]]:
+    """Read VEP JSONL and convert malformed output into an engine error."""
+
+    rows: list[dict[str, Any]] = []
+    with path.open(encoding="utf-8") as handle:
+        for line_number, line in enumerate(handle, start=1):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                payload = json.loads(line)
+            except json.JSONDecodeError as exc:
+                raise EngineFailed(
+                    f"VEP output contains invalid JSON at line {line_number}: {exc.msg}"
+                ) from exc
+            if not isinstance(payload, dict):
+                raise EngineFailed(
+                    f"VEP output line {line_number} is not a JSON object"
+                )
+            rows.append(payload)
+    return rows
+
+
+def _vep_cli_args(
+    assembly: str,
+    input_path: str,
+    output_path: str,
+    dir_cache: str,
+) -> list[str]:
     return [
         "--cache",
         "--merged",
@@ -297,7 +336,11 @@ def _docker_cache_volumes(dir_cache: Path) -> list[str]:
     return args
 
 
-def _run_local(assembly: str, input_file: Path, output_file: Path) -> subprocess.CompletedProcess[str]:
+def _run_local(
+    assembly: str,
+    input_file: Path,
+    output_file: Path,
+) -> subprocess.CompletedProcess[str]:
     dir_cache = str(cache_root().resolve())
     cmd = [
         "perl",
@@ -312,7 +355,12 @@ def _run_local(assembly: str, input_file: Path, output_file: Path) -> subprocess
     )
 
 
-def _run_docker(assembly: str, work: Path, input_name: str, output_name: str) -> subprocess.CompletedProcess[str]:
+def _run_docker(
+    assembly: str,
+    work: Path,
+    input_name: str,
+    output_name: str,
+) -> subprocess.CompletedProcess[str]:
     if not docker_available():
         raise EngineNotReady("docker not available for VEP_MODE=docker/auto")
 
@@ -380,16 +428,19 @@ def run_vep(variants: list[str], assembly: str) -> list[VariantResult]:
             input_file = work / "input.txt"
             output_file = work / "output.json"
 
-            with input_file.open("w", encoding="utf-8") as f:
-                for v in variants:
-                    norm = normalize_variant(v)
-                    normalized_map[norm] = v.strip()
-                    f.write(norm + "\n")
+            with input_file.open("w", encoding="utf-8") as handle:
+                for variant in variants:
+                    normalized = normalize_variant(variant)
+                    normalized_map[normalized] = variant.strip()
+                    handle.write(normalized + "\n")
 
             try:
                 if use_docker:
                     result = _run_docker(
-                        assembly, work, input_file.name, output_file.name
+                        assembly,
+                        work,
+                        input_file.name,
+                        output_file.name,
                     )
                 else:
                     result = _run_local(assembly, input_file, output_file)
@@ -411,13 +462,6 @@ def run_vep(variants: list[str], assembly: str) -> list[VariantResult]:
             if not output_file.is_file():
                 raise EngineFailed("VEP finished but output JSON is missing")
 
-            raw: list[dict[str, Any]] = []
-            with output_file.open(encoding="utf-8") as fh:
-                for line in fh:
-                    line = line.strip()
-                    if line:
-                        raw.append(json.loads(line))
-
-            return parse_vep_output(raw, normalized_map)
+            return parse_vep_output(_load_json_lines(output_file), normalized_map)
     finally:
         _semaphore().release()
