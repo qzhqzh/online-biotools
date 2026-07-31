@@ -206,10 +206,10 @@ online-biotool/
 │   └── prepare_annovar_db.sh
 ├── fixtures/
 ├── Dockerfile                      # multi-stage: Node build frontend → Python/Django 运行镜像
-└── data/                           # 不进 Git
-    ├── vep/116_GRCh37/
-    ├── vep/116_GRCh38/
-    └── annovar/hg38/
+└── data/                           # 不进 Git（见 data/README.md）
+    ├── vep/homo_sapiens_merged/116_GRCh37/
+    ├── vep/homo_sapiens_merged/116_GRCh38/
+    └── annovar/humandb/            # hg19_* + hg38_* 同目录
 ```
 
 ### 5.4 Docker Compose 形态（原则）

@@ -10,6 +10,7 @@
 | `BIOTOOLS_API_KEYS` | 逗号分隔 API Key；**非空时** `POST /api/v1/annotations/` 必须带 `X-API-Key` |
 | `BIOTOOLS_REQUIRE_API_KEY` | 设为 `1` 时强制要求密钥（即使 keys 列表为空也会拒绝，用于防误配） |
 | `BIOTOOLS_ANNOTATION_RATE` | 注释接口限流，默认 `30/min` |
+| `BIOTOOLS_JOB_COOLDOWN_SECONDS` | 同一客户端创建后台任务的最小间隔，默认 `10` |
 | `ANNOVAR_PUBLIC_ENABLED` | 默认 `0`；确认 ANNOVAR 授权后再设 `1` |
 
 ## 反向代理示例（Nginx）
@@ -41,11 +42,20 @@ curl -X POST https://biotools.example.com/api/v1/annotations/ \
   -d '{"engine":"vep","assembly":"GRCh37","variants":["17:43092951 G>A"]}'
 ```
 
-浏览器工具页可在「API Key」卡片中保存密钥到 localStorage。
+浏览器可在「引擎与设置」页保存 API Key 到 localStorage。注释页提交会创建后台任务（`POST /api/v1/jobs/`），并受 10 秒冷却限制。
 
 ## 日志
 
 访问日志由 `biotools.access` 输出，包含 `request_id` / method / path / status / duration_ms，**不记录变异序列正文**。
+
+## 注释资源路径
+
+| 用途 | 默认路径 |
+|------|----------|
+| VEP cache | `data/vep`（`VEP_CACHE_DIR`） |
+| ANNOVAR humandb | `data/annovar/humandb`（`ANNOVAR_DB_DIR`，含 hg19 + hg38） |
+
+VEP GRCh38 后台下载：`BACKGROUND=1 bash scripts/download_vep_cache.sh merged GRCh38`，日志在 `data/vep/.downloads/`。
 
 ## Legacy 数据清理
 

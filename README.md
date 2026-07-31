@@ -13,13 +13,25 @@
 
 - **权威代码**：根目录 Django / `frontend/` / `scripts/`
 - **遗留实验**：[`legacy/`](legacy/README.md)（FastAPI/CLI 沙箱，勿继续扩展）
-- **数据不进 Git**：`data/`（可用软链指向 legacy cache/humandb）
+- **数据不进 Git**：统一放在 `data/`（见 [`data/README.md`](data/README.md)）
 
-建议软链（本机已有数据时）：
+```
+data/vep/                              # VEP_CACHE_DIR
+data/annovar/humandb/                  # ANNOVAR_DB_DIR（hg19 + hg38）
+```
+
+已有 legacy GRCh37 cache 时可软链：
 
 ```bash
-ln -sfn "$(pwd)/legacy/online-tool/online-vep/cache" data/vep
-ln -sfn "$(pwd)/legacy/online-annovar/humandb" data/annovar-hg38
+mkdir -p data/vep/homo_sapiens_merged
+ln -sfn "$(pwd)/legacy/online-tool/online-vep/cache/homo_sapiens_merged/116_GRCh37" \
+  data/vep/homo_sapiens_merged/116_GRCh37
+```
+
+VEP GRCh38：
+
+```bash
+BACKGROUND=1 bash scripts/download_vep_cache.sh merged GRCh38
 ```
 
 ## 本地开发
@@ -41,8 +53,7 @@ ANNOVAR（宿主机）：需 docker 与镜像，或设置 `ANNOVAR_MODE=local` �
 ## Docker Compose
 
 ```bash
-export VEP_HOST_CACHE=./legacy/online-tool/online-vep/cache
-export ANNOVAR_HOST_DB=./legacy/online-annovar/humandb
+# 默认挂载 data/vep 与 data/annovar/humandb
 docker compose up -d --build
 curl http://localhost:8000/health/ready
 curl http://localhost:8000/api/v1/engines/

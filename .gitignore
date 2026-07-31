@@ -52,9 +52,19 @@ wget-log.*
 # Large reference data (never commit)
 data/**
 !data/.gitkeep
+!data/README.md
+!data/knowledge/
+!data/knowledge/**
+# Keep docs/meta; exclude bulky downloaded / generated knowledge payloads
+data/knowledge/raw/
+data/knowledge/genes.jsonl
+data/knowledge/transcript-map.json
+
 **/cache/
 **/vep_data/
 **/humandb/
+hg19/
+hg38/
 **/*.tar.gz
 **/*.tar.gz.*
 **/*.fa
@@ -62,6 +72,11 @@ data/**
 **/*.fasta
 **/*.fasta.gz
 **/*.aria2
+hg19_*.txt
+hg38_*.txt
+*.sites.*.txt
+*.sites.*.txt.idx
+*.sites.*.txt.temp
 
 # Local scratch / empty mounts
 online-tool/online-vep/data/

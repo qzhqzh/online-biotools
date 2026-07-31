@@ -4,8 +4,8 @@
 
 | 路径 | 原角色 | 处置 |
 |------|--------|------|
-| `online-tool/online-vep/` | FastAPI + VEP 116 API | 逻辑已迁入根目录 Django；cache 可经 `data/vep` 软链复用 |
+| `online-tool/online-vep/` | FastAPI + VEP 116 API | 逻辑已迁入根目录 Django；`116_GRCh37` 可软链到 `data/vep/homo_sapiens_merged/` |
 | `online-vep/` | VEP 115 CLI / GRCh38 | 用例迁完且 116 GRCh38 就绪后可删除（含重复 tar.gz） |
-| `online-annovar/` | ANNOVAR 手工 Docker | 服务经 Django `engines/annovar.py`；`humandb` 可经 `data/annovar-hg38` 软链复用 |
+| `online-annovar/` | ANNOVAR 手工 Docker | 服务经 Django `engines/annovar.py`；权威 humandb 在 `data/annovar/humandb/` |
 
 权威启动方式见仓库根 [README.md](../README.md)。

@@ -137,13 +137,27 @@ LOGGING = {
     },
 }
 
+# --- Local knowledge base (NCBI gene_info + MANE) ---
+KNOWLEDGE_DIR = os.environ.get(
+    "KNOWLEDGE_DIR",
+    str(BASE_DIR / "data" / "knowledge"),
+)
+
 # --- Annotation engines ---
 VEP_BIN = os.environ.get("VEP_BIN", "/opt/vep/src/ensembl-vep/vep")
 VEP_CACHE_DIR = os.environ.get("VEP_CACHE_DIR", str(BASE_DIR / "data" / "vep"))
 VEP_ASSEMBLY_DEFAULT = os.environ.get("VEP_ASSEMBLY", "GRCh37")
 VEP_TIMEOUT_SECONDS = int(os.environ.get("VEP_TIMEOUT_SECONDS", "300"))
 VEP_MAX_CONCURRENCY = int(os.environ.get("VEP_MAX_CONCURRENCY", "2"))
+# auto: use local VEP_BIN when present, otherwise Docker
+VEP_MODE = os.environ.get("VEP_MODE", "auto")  # auto|local|docker
+VEP_DOCKER_IMAGE = os.environ.get(
+    "VEP_DOCKER_IMAGE",
+    "ensemblorg/ensembl-vep:release_116.0",
+)
 ANNOTATION_MAX_VARIANTS = int(os.environ.get("ANNOTATION_MAX_VARIANTS", "200"))
+# Minimum seconds between annotation job submissions per client (IP / API key).
+BIOTOOLS_JOB_COOLDOWN_SECONDS = int(os.environ.get("BIOTOOLS_JOB_COOLDOWN_SECONDS", "10"))
 
 # assembly -> relative cache subdirectory under VEP_CACHE_DIR (manifest-aligned)
 VEP_ASSEMBLY_CACHE = {
@@ -155,7 +169,7 @@ VEP_ASSEMBLY_CACHE = {
 ANNOVAR_MODE = os.environ.get("ANNOVAR_MODE", "auto")  # auto|local|docker
 ANNOVAR_DB_DIR = os.environ.get(
     "ANNOVAR_DB_DIR",
-    str(BASE_DIR / "data" / "annovar-hg38"),
+    str(BASE_DIR / "data" / "annovar" / "humandb"),
 )
 ANNOVAR_TABLE_BIN = os.environ.get(
     "ANNOVAR_TABLE_BIN",
