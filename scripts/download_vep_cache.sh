@@ -15,6 +15,7 @@ ASSEMBLY="${2:-GRCh37}"
 CACHE_DIR="${CACHE_DIR:-./data/vep}"
 DOWNLOAD_DIR="${DOWNLOAD_DIR:-${CACHE_DIR}/.downloads}"
 BACKGROUND="${BACKGROUND:-0}"
+MANAGED_PIDFILE="${MANAGED_PIDFILE:-0}"
 
 case "$ASSEMBLY" in
   GRCh37)
@@ -47,6 +48,16 @@ TARGET="${DOWNLOAD_DIR}/${FILE}"
 LOG="${DOWNLOAD_DIR}/download_${VER}.log"
 PIDFILE="${DOWNLOAD_DIR}/download_${VER}.pid"
 MARKER="${DOWNLOAD_DIR}/download_${VER}.done"
+
+cleanup_pidfile() {
+  if [ "$MANAGED_PIDFILE" = "1" ]; then
+    rm -f "$PIDFILE"
+  fi
+}
+
+if [ "$MANAGED_PIDFILE" = "1" ]; then
+  trap cleanup_pidfile EXIT INT TERM
+fi
 
 run_download() {
   echo "[$(date -Iseconds)] Downloading $FILE"
@@ -81,16 +92,23 @@ run_download() {
 }
 
 if [ "$BACKGROUND" = "1" ]; then
-  if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
-    echo "Download already running (pid $(cat "$PIDFILE")). Log: $LOG"
-    exit 0
+  if [ -f "$PIDFILE" ]; then
+    existing_pid="$(cat "$PIDFILE" 2>/dev/null || true)"
+    if [ -n "$existing_pid" ] && kill -0 "$existing_pid" 2>/dev/null; then
+      echo "Download already running (pid $existing_pid). Log: $LOG"
+      exit 0
+    fi
+    echo "Removing stale pid file: $PIDFILE"
+    rm -f "$PIDFILE"
   fi
   if [ -f "$MARKER" ] && [ -d "${CACHE_DIR}/homo_sapiens_merged/${VER}" ]; then
     echo "Already complete ($MARKER). Skip."
     exit 0
   fi
-  # Re-exec without BACKGROUND to avoid nested nohup loops
-  nohup env BACKGROUND=0 CACHE_DIR="$CACHE_DIR" DOWNLOAD_DIR="$DOWNLOAD_DIR" \
+  # Re-exec without BACKGROUND to avoid nested nohup loops. The child owns and
+  # removes PIDFILE on normal exit, failure, SIGINT or SIGTERM.
+  nohup env BACKGROUND=0 MANAGED_PIDFILE=1 CACHE_DIR="$CACHE_DIR" \
+    DOWNLOAD_DIR="$DOWNLOAD_DIR" \
     bash "$0" "$CACHE_TYPE" "$ASSEMBLY" >"$LOG" 2>&1 &
   echo $! >"$PIDFILE"
   echo "Started background download pid=$(cat "$PIDFILE")"
