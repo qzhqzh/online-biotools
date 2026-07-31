@@ -46,7 +46,8 @@ wget-log.*
 *.wget-log
 
 # Large reference data (never commit)
-data/
+data/**
+!data/.gitkeep
 **/cache/
 **/vep_data/
 **/humandb/

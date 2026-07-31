@@ -1,26 +1,60 @@
 # online-biotools
 
-在线变异注释工具（VEP / ANNOVAR），目标形态见 [ARCHITECTURE_PLAN.md](ARCHITECTURE_PLAN.md)。
+在线变异注释工具。架构说明见 [ARCHITECTURE_PLAN.md](ARCHITECTURE_PLAN.md)。
 
-## 当前状态（初版）
+## 技术栈（定版）
 
-- 权威重构方向：**Django + DRF + Docker Compose**；前端 **Django Template + React（Vite）+ shadcn/ui + Monaco Editor**。
-- 仓库内仍保留历史实验目录（将逐步迁入 Django 后删除）：
-  - `online-tool/online-vep/` — 现有 FastAPI + VEP 116（GRCh37）服务
-  - `online-vep/` — 遗留 VEP 115 CLI 沙箱（仅脚本入仓，cache 不入仓）
-  - `online-annovar/` — ANNOVAR CLI 沙箱（仅编排与小样例入仓，数据库不入仓）
+- 后端：Django + Django REST framework
+- 启动：Docker Compose（gunicorn）
+- 前端（后续阶段）：Django Template + React/Vite + **shadcn/ui** + **Monaco Editor**
+- 引擎：VEP 116（已接入）；ANNOVAR（待服务化）
 
-**Reference data（cache / humandb / `*.tar.gz`）不纳入 Git**，需本地或部署卷挂载。
+## 仓库说明
 
-## 快速启动（遗留 FastAPI VEP）
+- **权威入口（重构中）**：仓库根目录 Django 项目（本 README 下述命令）。
+- **遗留目录**（将迁完后删除）：`online-tool/online-vep/`（FastAPI）、`online-vep/`、`online-annovar/`。
+- **大数据不进 Git**：`data/`、`**/cache/`、`**/vep_data/`、`**/humandb/`、`*.tar.gz`。
+
+## 本地开发（无 VEP 二进制时仅测 API/页面）
 
 ```bash
-cd online-tool/online-vep
-bash scripts/download_cache.sh   # 首次，约 24GB GRCh37 cache
-docker compose up -d --build
-curl http://localhost:8093/health
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements-dev.txt
+python manage.py migrate
+python manage.py test apps.annotations
+python manage.py runserver 8000
 ```
+
+## Docker Compose（含 VEP）
+
+若已有遗留 GRCh37 cache，可直接挂载：
+
+```bash
+export VEP_HOST_CACHE=./online-tool/online-vep/cache
+docker compose up -d --build
+curl http://localhost:8000/health/live
+curl http://localhost:8000/health/ready
+curl http://localhost:8000/api/v1/engines/
+```
+
+或下载到 `./data/vep`：
+
+```bash
+bash scripts/download_vep_cache.sh merged GRCh37
+docker compose up -d --build
+```
+
+### 注释示例
+
+```bash
+curl -s -X POST http://localhost:8000/api/v1/annotations/ \
+  -H 'Content-Type: application/json' \
+  -d '{"engine":"vep","assembly":"GRCh37","variants":["17:43092951 G>A"]}'
+```
+
+无对应 assembly cache 时返回 **503**（不再假装支持）。
 
 ## 安全提示
 
-若本地曾出现 `humandb/wget-log*` 等下载日志，可能含云凭证痕迹：请**轮换相关 AccessKey**，并确保此类文件已被 `.gitignore` 排除（切勿提交）。
+本地若曾有 `wget-log*` 含云凭证，请轮换 AccessKey；此类文件已被 `.gitignore` 排除。

@@ -1,0 +1,27 @@
+# Reference data / engine compatibility matrix (draft)
+# Large files are NOT in git; download via scripts/.
+
+engines:
+  vep:
+    release: "116"
+    image_hint: "ensemblorg/ensembl-vep:release_116.0"
+    assemblies:
+      GRCh37:
+        cache_subdir: "homo_sapiens_merged/116_GRCh37"
+        download_script: "scripts/download_vep_cache.sh merged GRCh37"
+        status: "available_locally_via_legacy_path"
+        legacy_path: "online-tool/online-vep/cache/homo_sapiens_merged/116_GRCh37"
+      GRCh38:
+        cache_subdir: "homo_sapiens_merged/116_GRCh38"
+        download_script: "scripts/download_vep_cache.sh merged GRCh38"
+        status: "not_provisioned_yet"
+  annovar:
+    image_hint: "registry.cn-shanghai.aliyuncs.com/kszy-biosoft/annovar:v20180416_2"
+    assemblies:
+      hg38:
+        db_subdir: "annovar/hg38"
+        status: "legacy_humandb_only"
+        license_note: "Confirm redistribution/online-service rights before exposing API"
+
+data_root_env: "VEP_CACHE_DIR / ANNOVAR_DB_DIR"
+compose_mount_example: "./data:/data"
