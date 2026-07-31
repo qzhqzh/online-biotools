@@ -1,26 +1,14 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Annotate — online-biotools</title>
-  <style>
-    body { font-family: "IBM Plex Sans", "Segoe UI", sans-serif; margin: 2rem; background: #f7f6f2; color: #1a1a1a; }
-    code { background: #eee; padding: 0.1rem 0.35rem; }
-    #annotate-root { border: 1px dashed #aaa; padding: 1.5rem; border-radius: 8px; background: #fff; }
-  </style>
+  <link rel="stylesheet" href="{% static 'portal/dist/assets/index.css' %}" />
 </head>
 <body>
-  <p><a href="/">← 首页</a></p>
-  <h1>变异注释</h1>
-  <p>此页将挂载 React + shadcn/ui + Monaco。当前可用 API：</p>
-  <div id="annotate-root">
-    <p><code>POST /api/v1/annotations/</code></p>
-    <pre>{
-  "engine": "vep",
-  "assembly": "GRCh37",
-  "variants": ["17:43092951 G>A"]
-}</pre>
-  </div>
+  <div id="annotate-root"></div>
+  <script type="module" src="{% static 'portal/dist/assets/annotate.js' %}"></script>
 </body>
 </html>

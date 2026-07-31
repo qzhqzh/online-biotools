@@ -3,7 +3,11 @@
 > 修订依据：当前工作区仅有 1 个 FastAPI 文件（约 285 行）、2 个 CLI Docker 沙箱、约 74GB reference data；无 Git、无前端、无测试、无统一入口。  
 > 产品目标：统一网页入口 + REST API；VEP 与 ANNOVAR 最终同等接入。  
 > **技术栈定版**：后端 **Django + Django REST framework**；部署 **Docker Compose**；前端 **Django Template 壳 + React（Vite 产出静态资源）**，UI 风格采用 **shadcn/ui**，变异/脚本编辑采用 **Monaco Editor**；不建独立 SPA 部署仓库，页面路由仍归 Django。  
-> **落地顺序**：先止血与数据治理 → 用 Django/DRF 重建权威入口并迁入 VEP → Template + shadcn/Monaco 工具页 → 再扩展 ANNOVAR。
+> **落地顺序**：先止血与数据治理 → 用 Django/DRF 重建权威入口并迁入 VEP → Template + shadcn/Monaco 工具页 → 再扩展 ANNOVAR。  
+> **实施进度（功能分支 `refactor/architecture-django-drf`）**  
+> - 已完成：Git 基线、Django+DRF+Compose、VEP/ANNOVAR、shadcn Sidebar 全站布局、Monaco VCF 输入、**阶段 4 生产硬化**（API Key、限流、request_id 日志、ANNOVAR 授权闸门、部署文档）、legacy 重复 tar 清理。  
+> - UI 约定：默认使用 shadcn 官方 neutral 主题；无用户明确要求不做个性化换肤。  
+> - 仍可选：彻底删除 `legacy/online-vep` 解压 cache（待 116/GRCh38 验收）、SSO、异步作业（阶段 5）。
 
 ---
 
@@ -202,10 +206,10 @@ online-biotool/
 │   └── prepare_annovar_db.sh
 ├── fixtures/
 ├── Dockerfile                      # multi-stage: Node build frontend → Python/Django 运行镜像
-└── data/                           # 不进 Git
-    ├── vep/116_GRCh37/
-    ├── vep/116_GRCh38/
-    └── annovar/hg38/
+└── data/                           # 不进 Git（见 data/README.md）
+    ├── vep/homo_sapiens_merged/116_GRCh37/
+    ├── vep/homo_sapiens_merged/116_GRCh38/
+    └── annovar/humandb/            # hg19_* + hg38_* 同目录
 ```
 
 ### 5.4 Docker Compose 形态（原则）

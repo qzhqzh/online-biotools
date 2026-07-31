@@ -1,0 +1,32 @@
+##fileformat=VCFv4.2
+##INFO=<ID=GENE,Number=1,Type=String,Description="Gene name">
+##INFO=<ID=STRAND,Number=1,Type=String,Description="Gene strand">
+##INFO=<ID=SVLEN,Number=.,Type=Integer,Description="Difference in length between REF and ALT alleles">
+##INFO=<ID=CDS,Number=1,Type=String,Description="CDS annotation (modified)">
+##INFO=<ID=AA,Number=1,Type=String,Description="Peptide annotation (modified)">
+##INFO=<ID=AR,Number=1,Type=Float,Description="Allelic Ratio">
+##INFO=<ID=AF,Number=1,Type=Float,Description="Allele Frequency">
+##INFO=<ID=DP,Number=1,Type=Float,Description="Total Depth">
+##INFO=<ID=VD,Number=1,Type=Float,Description="Variant Depth">
+##INFO=<ID=AAR,Number=1,Type=Float,Description="Adjusted Allelic Ratio (Max Estimate)">
+##INFO=<ID=AAF,Number=1,Type=Float,Description="Adjusted Allele Frequency (Max Estimate)">
+##INFO=<ID=RAR,Number=1,Type=Float,Description="Raw Allelic Ratio">
+##INFO=<ID=RAF,Number=1,Type=Float,Description="Raw Allele Frequency">
+##INFO=<ID=RDP,Number=1,Type=Float,Description="Raw Total Depth">
+##INFO=<ID=RVD,Number=1,Type=Float,Description="Raw Variant Depth">
+##INFO=<ID=SAMPLE,Number=1,Type=String,Description="Sample name">
+##FORMAT=<ID=CR,Number=6,Type=Integer,Description="Coverage Radius">
+##FORMAT=<ID=DB,Number=.,Type=String,Description="Duplicated Baits (among fwdP1-P3, revP1-P3, other)">
+##FORMAT=<ID=NB,Number=.,Type=String,Description="Non-binding Baits">
+##FORMAT=<ID=RB,Number=.,Type=String,Description="Reaching Baits capturing mut + wt junctions in R2 (unambiguous)">
+##FORMAT=<ID=AFB,Number=7,Type=Float,Description="Allele frequency by Baits">
+##FORMAT=<ID=Fwd1,Number=1,Type=String,Description="AF details for bait Fwd1">
+##FORMAT=<ID=Fwd2,Number=1,Type=String,Description="AF details for bait Fwd2">
+##FORMAT=<ID=Fwd3,Number=1,Type=String,Description="AF details for bait Fwd3">
+##FORMAT=<ID=Rev1,Number=1,Type=String,Description="AF details for bait Rev1">
+##FORMAT=<ID=Rev2,Number=1,Type=String,Description="AF details for bait Rev2">
+##FORMAT=<ID=Rev3,Number=1,Type=String,Description="AF details for bait Rev3">
+##FORMAT=<ID=Oth,Number=1,Type=String,Description="AF details for reads not assigned to a bait">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	P260413007.sorted_FLT3
+chr13	28034061	c.1780_1837+20dup	T	TTTGGCACATTCCATTCTTACCAAACTCTAAATTTTCTCTTGGAAACTCCCATTTGAGATCATATTCATATTCTCTGAA	.	.	GENE=FLT3;STRAND=-;SVLEN=78;CDS=c.1780_1837+20dup;AA=p.593_594insFREYEYDLKWEFPRENLEFGKNGMCQ;AR=0;AF=0;DP=0;VD=0;AAR=0;AAF=0;RAR=0.001778;RAF=0.001618;RDP=4943;RVD=8;SAMPLE=P260413007.sorted_FLT3	AR:AF:DP:VD:AAR:AAF:RAR:RAF:RDP:RVD:CR	0:0:0:0:0:0:0.001778:0.001618:4943:8:0,0,0,4,34,118
+chr13	28033966	c.1788_1862dup[+i14]	A	AAAAGCACCTGATCCTAGTACCTTCCCTGCAAAGACAAATGGTGAGTACGTGCATTTTAAAGATTTTCCAATGGAAAAGAAATGCTGCAGAAACATTTGGCACATTCCATTCTTACCAAACTCTAAATTTTCTCTTGGAAACTCCCATTTGAGATCATATTCATAT	.	.	GENE=FLT3;STRAND=-;SVLEN=165;CDS=c.1788_1862dup[+i14];AA=p.620_621insL/597-620;AR=0;AF=0;DP=0;VD=0;AAR=0;AAF=0;RAR=0.09691;RAF=0.08821;RDP=4308;RVD=380;SAMPLE=P260413007.sorted_FLT3	AR:AF:DP:VD:AAR:AAF:RAR:RAF:RDP:RVD:CR	0:0:0:0:0:0:0.09691:0.08821:4308:380:0,0,0,0,0,330

@@ -1,23 +1,80 @@
+x-app-environment: &app-environment
+  DJANGO_DEBUG: ${DJANGO_DEBUG:-0}
+  DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
+  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Set DJANGO_SECRET_KEY in .env}
+  DJANGO_DB_PATH: /data/db/db.sqlite3
+  DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-}
+  DJANGO_TRUST_X_FORWARDED_PROTO: ${DJANGO_TRUST_X_FORWARDED_PROTO:-0}
+  DJANGO_SECURE_SSL_REDIRECT: ${DJANGO_SECURE_SSL_REDIRECT:-0}
+  DJANGO_SESSION_COOKIE_SECURE: ${DJANGO_SESSION_COOKIE_SECURE:-0}
+  DJANGO_CSRF_COOKIE_SECURE: ${DJANGO_CSRF_COOKIE_SECURE:-0}
+  DJANGO_SECURE_HSTS_SECONDS: ${DJANGO_SECURE_HSTS_SECONDS:-0}
+  BIOTOOLS_API_KEYS: ${BIOTOOLS_API_KEYS:-}
+  BIOTOOLS_REQUIRE_API_KEY: ${BIOTOOLS_REQUIRE_API_KEY:-0}
+  BIOTOOLS_ANNOTATION_RATE: ${BIOTOOLS_ANNOTATION_RATE:-30/min}
+  BIOTOOLS_JOB_COOLDOWN_SECONDS: ${BIOTOOLS_JOB_COOLDOWN_SECONDS:-10}
+  BIOTOOLS_JOB_STALE_AFTER_SECONDS: ${BIOTOOLS_JOB_STALE_AFTER_SECONDS:-1800}
+  BIOTOOLS_WORKER_POLL_SECONDS: ${BIOTOOLS_WORKER_POLL_SECONDS:-1}
+  BIOTOOLS_TRUST_X_FORWARDED_FOR: ${BIOTOOLS_TRUST_X_FORWARDED_FOR:-0}
+  ANNOTATION_MAX_VARIANTS: ${ANNOTATION_MAX_VARIANTS:-200}
+  VEP_BIN: ${VEP_BIN:-/opt/vep/src/ensembl-vep/vep}
+  VEP_CACHE_DIR: /data/vep
+  VEP_ASSEMBLY: ${VEP_ASSEMBLY:-GRCh37}
+  VEP_MODE: ${VEP_MODE:-local}
+  VEP_MAX_CONCURRENCY: ${VEP_MAX_CONCURRENCY:-2}
+  VEP_TIMEOUT_SECONDS: ${VEP_TIMEOUT_SECONDS:-300}
+  VEP_DOCKER_IMAGE: ${VEP_DOCKER_IMAGE:-ensemblorg/ensembl-vep:release_116.0}
+  ANNOVAR_MODE: ${ANNOVAR_MODE:-local}
+  ANNOVAR_DB_DIR: /data/annovar
+  ANNOVAR_PUBLIC_ENABLED: ${ANNOVAR_PUBLIC_ENABLED:-0}
+  ANNOVAR_DOCKER_IMAGE: ${ANNOVAR_DOCKER_IMAGE:-registry.cn-shanghai.aliyuncs.com/kszy-biosoft/annovar:v20180416_2}
+  ANNOVAR_TABLE_BIN: ${ANNOVAR_TABLE_BIN:-/home/TOOLS/tools/annovar/current/bin/table_annovar.pl}
+  ANNOVAR_MAX_CONCURRENCY: ${ANNOVAR_MAX_CONCURRENCY:-1}
+  ANNOVAR_TIMEOUT_SECONDS: ${ANNOVAR_TIMEOUT_SECONDS:-300}
+
+x-app-volumes: &app-volumes
+  - biotools-db:/data/db
+  - ${VEP_HOST_CACHE:-./data/vep}:/data/vep:ro
+  # Overlay GRCh37 when data/vep uses a host symlink (Docker does not follow it).
+  - ${VEP_HOST_CACHE_GRCh37:-./legacy/online-tool/online-vep/cache/homo_sapiens_merged/116_GRCh37}:/data/vep/homo_sapiens_merged/116_GRCh37:ro
+  - ${ANNOVAR_HOST_DB:-./data/annovar/humandb}:/data/annovar:ro
+
 services:
-  web:
+  migrate:
     build: .
+    image: online-biotools:local
+    environment: *app-environment
+    volumes: *app-volumes
+    command: ["python", "manage.py", "migrate", "--noinput"]
+    restart: "no"
+
+  web:
+    image: online-biotools:local
     container_name: online-biotools-web
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
     ports:
-      - "8000:8000"
-    environment:
-      DJANGO_DEBUG: "0"
-      DJANGO_ALLOWED_HOSTS: "*"
-      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-change-me-in-production}
-      VEP_BIN: /opt/vep/src/ensembl-vep/vep
-      VEP_CACHE_DIR: /data/vep
-      VEP_ASSEMBLY: GRCh37
-      VEP_MAX_CONCURRENCY: "2"
-    volumes:
-      # Prefer ./data/vep; can symlink from legacy online-tool/online-vep/cache
-      - ${VEP_HOST_CACHE:-./data/vep}:/data/vep:ro
+      - "${BIOTOOLS_PORT:-8000}:8000"
+    environment: *app-environment
+    volumes: *app-volumes
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health/live"]
       interval: 30s
       timeout: 10s
       retries: 3
+
+  worker:
+    image: online-biotools:local
+    container_name: online-biotools-worker
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment: *app-environment
+    volumes: *app-volumes
+    command: ["python", "manage.py", "run_annotation_worker"]
+    restart: unless-stopped
+
+volumes:
+  biotools-db:

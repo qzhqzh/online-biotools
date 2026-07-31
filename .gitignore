@@ -29,6 +29,10 @@ frontend/dist/
 apps/portal/static/portal/dist/
 *.tsbuildinfo
 
+# Keep built assets out of git by default; CI/Docker builds them.
+# Uncomment the next line only if you must vendor a prebuilt bundle:
+# !apps/portal/static/portal/dist/**
+
 # IDE / OS
 .idea/
 .vscode/
@@ -48,16 +52,30 @@ wget-log.*
 # Large reference data (never commit)
 data/**
 !data/.gitkeep
+!data/README.md
+!data/knowledge/
+!data/knowledge/**
+# Keep docs/meta; exclude bulky downloaded / generated knowledge payloads
+data/knowledge/raw/
+data/knowledge/genes.jsonl
+data/knowledge/transcript-map.json
+
 **/cache/
 **/vep_data/
 **/humandb/
+hg19/
+hg38/
 **/*.tar.gz
 **/*.tar.gz.*
-**/*.fa
-**/*.fa.gz
-**/*.fasta
-**/*.fasta.gz
 **/*.aria2
+hg19_*.txt
+hg38_*.txt
+*.sites.*.txt
+*.sites.*.txt.idx
+*.sites.*.txt.temp
+
+# Reference FASTA belongs under ignored data/cache directories. Do not ignore
+# *.fa/*.fasta globally so small fixtures can be committed under fixtures/.
 
 # Local scratch / empty mounts
 online-tool/online-vep/data/
