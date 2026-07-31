@@ -17,6 +17,24 @@ from apps.annotations.services import annotate as annotate_service
 from apps.annotations.services import jobs as jobs_service
 
 
+def _bounded_query_int(
+    query_params,
+    name: str,
+    default: int,
+    *,
+    minimum: int = 0,
+    maximum: int | None = None,
+) -> int:
+    try:
+        value = int(query_params.get(name, str(default)))
+    except (TypeError, ValueError):
+        value = default
+    value = max(minimum, value)
+    if maximum is not None:
+        value = min(maximum, value)
+    return value
+
+
 class EnginesView(APIView):
     authentication_classes = []
     permission_classes = []
@@ -57,15 +75,15 @@ class JobsView(APIView):
     throttle_classes = [AnnotationRateThrottle]
 
     def get(self, request):
-        try:
-            limit = int(request.query_params.get("limit", "50"))
-        except ValueError:
-            limit = 50
+        limit = _bounded_query_int(
+            request.query_params, "limit", 50, minimum=1, maximum=200
+        )
         jobs = jobs_service.list_jobs(limit=limit)
         return Response(
             {
                 "jobs": [
-                    jobs_service.job_to_dict(j, include_result=False) for j in jobs
+                    jobs_service.job_to_dict(job, include_result=False)
+                    for job in jobs
                 ]
             }
         )
@@ -145,14 +163,12 @@ class KnowledgeGenesView(APIView):
     def get(self, request):
         q = request.query_params.get("q", "")
         gene_type = request.query_params.get("type") or None
-        try:
-            limit = min(max(int(request.query_params.get("limit", "50")), 1), 200)
-        except ValueError:
-            limit = 50
-        try:
-            offset = max(int(request.query_params.get("offset", "0")), 0)
-        except ValueError:
-            offset = 0
+        limit = _bounded_query_int(
+            request.query_params, "limit", 50, minimum=1, maximum=200
+        )
+        offset = _bounded_query_int(
+            request.query_params, "offset", 0, minimum=0
+        )
         return Response(
             knowledge_store.search_genes(
                 q, gene_type=gene_type, limit=limit, offset=offset
@@ -171,14 +187,12 @@ class KnowledgeTranscriptsView(APIView):
             "true",
             "yes",
         }
-        try:
-            limit = min(max(int(request.query_params.get("limit", "50")), 1), 200)
-        except ValueError:
-            limit = 50
-        try:
-            offset = max(int(request.query_params.get("offset", "0")), 0)
-        except ValueError:
-            offset = 0
+        limit = _bounded_query_int(
+            request.query_params, "limit", 50, minimum=1, maximum=200
+        )
+        offset = _bounded_query_int(
+            request.query_params, "offset", 0, minimum=0
+        )
         return Response(
             knowledge_store.search_transcripts(
                 q, mane_only=mane_only, limit=limit, offset=offset
