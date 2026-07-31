@@ -2,21 +2,63 @@
 
 from pathlib import Path
 import os
+import sys
+
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ.get(
-    "DJANGO_SECRET_KEY",
-    "dev-only-change-me-online-biotools-not-for-production",
-)
 
-DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
+def env_bool(name: str, default: bool = False) -> bool:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
+IS_TESTING = "test" in sys.argv or "pytest" in Path(sys.argv[0]).name.lower()
+DEBUG = env_bool("DJANGO_DEBUG", False)
+
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "").strip()
+if not SECRET_KEY:
+    if DEBUG or IS_TESTING:
+        SECRET_KEY = "dev-only-online-biotools-secret-key"
+    else:
+        raise ImproperlyConfigured(
+            "DJANGO_SECRET_KEY is required when DJANGO_DEBUG is disabled"
+        )
 
 ALLOWED_HOSTS = [
-    h.strip()
-    for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
-    if h.strip()
+    host.strip()
+    for host in os.environ.get(
+        "DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1"
+    ).split(",")
+    if host.strip()
 ]
+if IS_TESTING and "testserver" not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append("testserver")
+
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",")
+    if origin.strip()
+]
+
+# TLS and reverse-proxy settings are explicit opt-ins. Enable them only when
+# Django is behind a trusted proxy that overwrites the corresponding headers.
+TRUST_X_FORWARDED_PROTO = env_bool("DJANGO_TRUST_X_FORWARDED_PROTO", False)
+if TRUST_X_FORWARDED_PROTO:
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+SECURE_SSL_REDIRECT = env_bool("DJANGO_SECURE_SSL_REDIRECT", False)
+SESSION_COOKIE_SECURE = env_bool("DJANGO_SESSION_COOKIE_SECURE", SECURE_SSL_REDIRECT)
+CSRF_COOKIE_SECURE = env_bool("DJANGO_CSRF_COOKIE_SECURE", SECURE_SSL_REDIRECT)
+SECURE_HSTS_SECONDS = int(os.environ.get("DJANGO_SECURE_HSTS_SECONDS", "0"))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool(
+    "DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS", False
+)
+SECURE_HSTS_PRELOAD = env_bool("DJANGO_SECURE_HSTS_PRELOAD", False)
+SECURE_CONTENT_TYPE_NOSNIFF = True
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -63,7 +105,7 @@ WSGI_APPLICATION = "config.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "NAME": os.environ.get("DJANGO_DB_PATH", str(BASE_DIR / "db.sqlite3")),
     }
 }
 
@@ -107,7 +149,11 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS = int(os.environ.get("DATA_UPLOAD_MAX_NUMBER_FIELD
 # Auth / ops
 # Comma-separated keys. When non-empty (or BIOTOOLS_REQUIRE_API_KEY=1), POST annotate requires X-API-Key.
 BIOTOOLS_API_KEYS = os.environ.get("BIOTOOLS_API_KEYS", "")
-BIOTOOLS_REQUIRE_API_KEY = os.environ.get("BIOTOOLS_REQUIRE_API_KEY", "0") == "1"
+BIOTOOLS_REQUIRE_API_KEY = env_bool("BIOTOOLS_REQUIRE_API_KEY", False)
+# Trust X-Forwarded-For only behind a proxy that strips the client-supplied header.
+BIOTOOLS_TRUST_X_FORWARDED_FOR = env_bool(
+    "BIOTOOLS_TRUST_X_FORWARDED_FOR", False
+)
 
 LOGGING = {
     "version": 1,
@@ -125,6 +171,11 @@ LOGGING = {
     },
     "loggers": {
         "biotools.access": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "biotools.jobs": {
             "handlers": ["console"],
             "level": "INFO",
             "propagate": False,
@@ -158,6 +209,12 @@ VEP_DOCKER_IMAGE = os.environ.get(
 ANNOTATION_MAX_VARIANTS = int(os.environ.get("ANNOTATION_MAX_VARIANTS", "200"))
 # Minimum seconds between annotation job submissions per client (IP / API key).
 BIOTOOLS_JOB_COOLDOWN_SECONDS = int(os.environ.get("BIOTOOLS_JOB_COOLDOWN_SECONDS", "10"))
+BIOTOOLS_JOB_STALE_AFTER_SECONDS = int(
+    os.environ.get("BIOTOOLS_JOB_STALE_AFTER_SECONDS", "1800")
+)
+BIOTOOLS_WORKER_POLL_SECONDS = float(
+    os.environ.get("BIOTOOLS_WORKER_POLL_SECONDS", "1")
+)
 
 # assembly -> relative cache subdirectory under VEP_CACHE_DIR (manifest-aligned)
 VEP_ASSEMBLY_CACHE = {
@@ -183,4 +240,4 @@ ANNOVAR_TIMEOUT_SECONDS = int(os.environ.get("ANNOVAR_TIMEOUT_SECONDS", "300"))
 ANNOVAR_MAX_CONCURRENCY = int(os.environ.get("ANNOVAR_MAX_CONCURRENCY", "1"))
 ANNOVAR_VERSION_LABEL = os.environ.get("ANNOVAR_VERSION_LABEL", "2018-04-16")
 # Gate public/online ANNOVAR usage until license is confirmed by the operator.
-ANNOVAR_PUBLIC_ENABLED = os.environ.get("ANNOVAR_PUBLIC_ENABLED", "0") == "1"
+ANNOVAR_PUBLIC_ENABLED = env_bool("ANNOVAR_PUBLIC_ENABLED", False)
