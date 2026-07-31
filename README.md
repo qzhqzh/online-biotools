@@ -6,16 +6,10 @@
 
 - 后端：Django + Django REST framework
 - 启动：Docker Compose（gunicorn）
-- 前端（后续阶段）：Django Template + React/Vite + **shadcn/ui** + **Monaco Editor**
+- 前端：Django Template + React/Vite + **shadcn/ui** + **Monaco Editor**（`frontend/`）
 - 引擎：VEP 116（已接入）；ANNOVAR（待服务化）
 
-## 仓库说明
-
-- **权威入口（重构中）**：仓库根目录 Django 项目（本 README 下述命令）。
-- **遗留目录**（将迁完后删除）：`online-tool/online-vep/`（FastAPI）、`online-vep/`、`online-annovar/`。
-- **大数据不进 Git**：`data/`、`**/cache/`、`**/vep_data/`、`**/humandb/`、`*.tar.gz`。
-
-## 本地开发（无 VEP 二进制时仅测 API/页面）
+## 本地开发
 
 ```bash
 python3 -m venv .venv
@@ -23,8 +17,15 @@ source .venv/bin/activate
 pip install -r requirements-dev.txt
 python manage.py migrate
 python manage.py test apps.annotations
+
+# 前端（首次）
+cd frontend && npm install && npm run build && cd ..
+
 python manage.py runserver 8000
+# 打开 http://127.0.0.1:8000/tools/annotate/
 ```
+
+前端热更新（可选）：另开终端 `cd frontend && npm run dev`（已代理 `/api` 到 8000）。
 
 ## Docker Compose（含 VEP）
 
@@ -34,9 +35,10 @@ python manage.py runserver 8000
 export VEP_HOST_CACHE=./online-tool/online-vep/cache
 docker compose up -d --build
 curl http://localhost:8000/health/live
-curl http://localhost:8000/health/ready
 curl http://localhost:8000/api/v1/engines/
 ```
+
+打开 http://localhost:8000/tools/annotate/ 使用 shadcn + Monaco 工具页。
 
 或下载到 `./data/vep`：
 

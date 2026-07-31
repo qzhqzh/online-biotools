@@ -3,7 +3,8 @@
 > 修订依据：当前工作区仅有 1 个 FastAPI 文件（约 285 行）、2 个 CLI Docker 沙箱、约 74GB reference data；无 Git、无前端、无测试、无统一入口。  
 > 产品目标：统一网页入口 + REST API；VEP 与 ANNOVAR 最终同等接入。  
 > **技术栈定版**：后端 **Django + Django REST framework**；部署 **Docker Compose**；前端 **Django Template 壳 + React（Vite 产出静态资源）**，UI 风格采用 **shadcn/ui**，变异/脚本编辑采用 **Monaco Editor**；不建独立 SPA 部署仓库，页面路由仍归 Django。  
-> **落地顺序**：先止血与数据治理 → 用 Django/DRF 重建权威入口并迁入 VEP → Template + shadcn/Monaco 工具页 → 再扩展 ANNOVAR。
+> **落地顺序**：先止血与数据治理 → 用 Django/DRF 重建权威入口并迁入 VEP → Template + shadcn/Monaco 工具页 → 再扩展 ANNOVAR。  
+> **实施进度（功能分支 `refactor/architecture-django-drf`）**：Django/DRF/Compose 与 VEP 迁入已在 `main`；本分支补齐 `frontend/`（Vite + shadcn/ui + Monaco）与多阶段 Docker 构建，工具页挂载于 `/tools/annotate/`。
 
 ---
 

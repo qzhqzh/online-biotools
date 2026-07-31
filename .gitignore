@@ -29,6 +29,10 @@ frontend/dist/
 apps/portal/static/portal/dist/
 *.tsbuildinfo
 
+# Keep built assets out of git by default; CI/Docker builds them.
+# Uncomment the next line only if you must vendor a prebuilt bundle:
+# !apps/portal/static/portal/dist/**
+
 # IDE / OS
 .idea/
 .vscode/

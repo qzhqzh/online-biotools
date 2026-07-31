@@ -1,4 +1,12 @@
 # syntax=docker/dockerfile:1
+
+FROM node:22-bookworm AS frontend
+WORKDIR /frontend
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build:docker
+
 FROM ensemblorg/ensembl-vep:release_116.0
 
 USER root
@@ -21,6 +29,7 @@ COPY manage.py /app/manage.py
 COPY config /app/config
 COPY apps /app/apps
 COPY reference-manifest.yaml /app/reference-manifest.yaml
+COPY --from=frontend /frontend/dist /app/apps/portal/static/portal/dist
 
 ENV PATH="/opt/biotools/bin:$PATH" \
     PYTHONDONTWRITEBYTECODE=1 \

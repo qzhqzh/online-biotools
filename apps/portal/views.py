@@ -3,7 +3,7 @@ from django.http import JsonResponse
 
 
 def home(request):
-    """Placeholder portal; React+shadcn UI arrives in a later phase."""
+    """Portal home; JSON clients get service metadata."""
     if "application/json" in request.headers.get("Accept", ""):
         return JsonResponse(
             {
@@ -16,4 +16,8 @@ def home(request):
 
 
 def annotate_tool(request):
-    return render(request, "portal/annotate.html")
+    bootstrap = {
+        "apiBase": "/api/v1",
+        "csrfCookie": "csrftoken",
+    }
+    return render(request, "portal/annotate.html", {"bootstrap": bootstrap})
