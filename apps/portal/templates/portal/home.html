@@ -1,29 +1,14 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>online-biotools</title>
-  <style>
-    :root { color-scheme: light; --fg: #1a1a1a; --muted: #5c5c5c; --bg: #f7f6f2; --accent: #0f6a4f; }
-    body { margin: 0; font-family: "IBM Plex Sans", "Segoe UI", sans-serif; background: var(--bg); color: var(--fg); }
-    main { max-width: 720px; margin: 0 auto; padding: 3rem 1.25rem; }
-    h1 { font-size: 1.75rem; letter-spacing: -0.02em; margin: 0 0 0.5rem; }
-    p { color: var(--muted); line-height: 1.55; }
-    a { color: var(--accent); }
-    ul { line-height: 1.8; }
-  </style>
+  <link rel="stylesheet" href="{% static 'portal/dist/assets/index.css' %}" />
 </head>
 <body>
-  <main>
-    <h1>online-biotools</h1>
-    <p>Django + DRF 权威入口（重构中）。前端 shadcn/ui + Monaco 将挂载于工具页。</p>
-    <ul>
-      <li><a href="/tools/annotate/">注释工具页（占位）</a></li>
-      <li><a href="/api/v1/engines/">GET /api/v1/engines/</a></li>
-      <li><a href="/health/live">GET /health/live</a></li>
-      <li><a href="/health/ready">GET /health/ready</a></li>
-    </ul>
-  </main>
+  <div id="home-root"></div>
+  <script type="module" src="{% static 'portal/dist/assets/annotate.js' %}"></script>
 </body>
 </html>
