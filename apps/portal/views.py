@@ -10,18 +10,21 @@ def home(request):
                 "service": "online-biotools",
                 "docs": "/docs/",
                 "annotate_ui": "/tools/annotate/",
+                "jobs_ui": "/tools/jobs/",
                 "engines_ui": "/tools/engines/",
+                "gene_knowledge_ui": "/knowledge/genes/",
+                "amino_acid_knowledge_ui": "/knowledge/amino-acids/",
             }
         )
     return render(request, "portal/home.html")
 
 
 def annotate_tool(request):
-    bootstrap = {
-        "apiBase": "/api/v1",
-        "csrfCookie": "csrftoken",
-    }
-    return render(request, "portal/annotate.html", {"bootstrap": bootstrap})
+    return render(request, "portal/annotate.html")
+
+
+def jobs_page(request):
+    return render(request, "portal/jobs.html")
 
 
 def engines_page(request):
@@ -30,3 +33,11 @@ def engines_page(request):
 
 def docs_page(request):
     return render(request, "portal/docs.html")
+
+
+def gene_knowledge_page(request):
+    return render(request, "portal/gene_knowledge.html")
+
+
+def amino_acid_knowledge_page(request):
+    return render(request, "portal/amino_acid_knowledge.html")

@@ -1,0 +1,55 @@
+{
+  "imported_at": "2026-07-31T16:42:43.707146+00:00",
+  "mane": {
+    "version": "1.5",
+    "assembly": "GRCh38",
+    "assembly_note": "仅针对 GRCh38；无官方 GRCh37/hg19 MANE。集合含 MANE Select（每蛋白编码基因一条常用转录本）与 MANE Plus Clinical（临床额外转录本）。",
+    "refseq_annotation": "GCF_000001405.40-RS_2025_08",
+    "ensembl_release": "116",
+    "ftp_current": "https://ftp.ncbi.nlm.nih.gov/refseq/MANE/MANE_human/current/",
+    "summary_url": "https://ftp.ncbi.nlm.nih.gov/refseq/MANE/MANE_human/current/MANE.GRCh38.v1.5.summary.txt.gz",
+    "docs": {
+      "ncbi": "https://www.ncbi.nlm.nih.gov/refseq/MANE/",
+      "ensembl": "https://www.ensembl.org/info/genome/genebuild/mane.html"
+    },
+    "mane_select": 19363,
+    "mane_plus_clinical": 74,
+    "accession_keys": 77610
+  },
+  "sources": {
+    "gene_info": {
+      "url": "https://ftp.ncbi.nlm.nih.gov/gene/DATA/GENE_INFO/Mammalia/Homo_sapiens.gene_info.gz",
+      "file": "data/knowledge/raw/Homo_sapiens.gene_info.gz"
+    },
+    "mane": {
+      "url": "https://ftp.ncbi.nlm.nih.gov/refseq/MANE/MANE_human/current/MANE.GRCh38.v1.5.summary.txt.gz",
+      "file": "data/knowledge/raw/MANE.summary.txt.gz",
+      "readme": "data/knowledge/raw/README_versions.txt"
+    }
+  },
+  "genes": {
+    "gene_count": 193885,
+    "by_type": {
+      "biological-region": 128261,
+      "ncRNA": 22599,
+      "other": 844,
+      "protein-coding": 20621,
+      "pseudo": 17504,
+      "rRNA": 785,
+      "scRNA": 4,
+      "snRNA": 168,
+      "snoRNA": 1201,
+      "tRNA": 701,
+      "unknown": 1197
+    }
+  },
+  "transcripts": {
+    "mane_select": 19363,
+    "mane_plus_clinical": 74,
+    "accession_keys": 77610
+  },
+  "files": {
+    "genes": "genes.jsonl",
+    "transcript_map": "transcript-map.json"
+  }
+}
