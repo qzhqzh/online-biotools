@@ -30,6 +30,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { AppShell } from "@/layouts/AppShell"
 import {
   annotateVariants,
   fetchEngines,
@@ -81,7 +82,6 @@ export default function AnnotateApp() {
       .map((line) => line.trim())
       .filter((line) => line && !line.startsWith("##") && !line.startsWith("#CHROM"))
       .map((line) => {
-        // Accept simple VCF body rows: CHROM POS ... REF ALT
         const parts = line.split(/\t+|\s+/)
         if (
           parts.length >= 5 &&
@@ -117,194 +117,195 @@ export default function AnnotateApp() {
   }
 
   return (
-    <div className="min-h-screen">
-      <header className="border-b">
-        <div className="mx-auto flex max-w-5xl items-center gap-3 px-6 py-3 text-sm">
-          <a href="/" className="font-medium underline-offset-4 hover:underline">
-            online-biotools
-          </a>
-          <span className="text-muted-foreground">/</span>
-          <span>annotate</span>
-        </div>
-      </header>
-      <div className="mx-auto flex max-w-5xl flex-col gap-6 p-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">变异注释</h1>
-          <p className="text-sm text-muted-foreground">
-            shadcn/ui（原版）+ Monaco Editor · API{" "}
-            <code className="rounded bg-muted px-1 py-0.5 text-xs">
-              POST /api/v1/annotations/
-            </code>
-          </p>
-        </div>
-        <div className="flex gap-2">
+    <AppShell
+      title="变异注释"
+      description="左侧选择引擎与基因组版本，右侧用 Monaco 编辑 VCF / 变异后提交。"
+      crumbs={[
+        { label: "工具", href: "/tools/annotate/" },
+        { label: "变异注释" },
+      ]}
+      actions={
+        <>
           <Badge variant={currentEngine?.ready ? "default" : "secondary"}>
-            {currentEngine ? `${currentEngine.name}` : "加载中"}
+            {currentEngine ? currentEngine.name : "加载中"}
           </Badge>
           <Badge variant="outline">{assembly}</Badge>
-        </div>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>任务设置</CardTitle>
-          <CardDescription>
-            在下方 Monaco 编辑器中粘贴变异列表或 VCF 片段。
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="engine">引擎</Label>
-              <Select value={engine} onValueChange={setEngine}>
-                <SelectTrigger id="engine" className="w-full">
-                  <SelectValue placeholder="选择引擎" />
-                </SelectTrigger>
-                <SelectContent>
-                  {engines.map((item) => (
-                    <SelectItem key={item.id} value={item.id}>
-                      {item.name}
-                      {item.ready ? "" : "（未就绪）"}
-                    </SelectItem>
-                  ))}
-                  <SelectItem value="both">VEP + ANNOVAR</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="assembly">Assembly</Label>
-              <Select value={assembly} onValueChange={setAssembly}>
-                <SelectTrigger id="assembly" className="w-full">
-                  <SelectValue placeholder="选择 assembly" />
-                </SelectTrigger>
-                <SelectContent>
-                  {assemblies.map((item) => (
-                    <SelectItem key={item} value={item}>
-                      {item}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <p className="text-sm text-muted-foreground">
-            {currentEngine
-              ? currentEngine.ready
-                ? `就绪 assembly：${currentEngine.ready_assemblies.join(", ") || "无"}`
-                : "引擎未就绪：请挂载/下载对应 cache 或数据库"
-              : "加载引擎信息中…"}
-          </p>
-
-          <Separator />
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <Label>VCF / 变异输入（Monaco Editor）</Label>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setText(SAMPLE_LINES)}
-                  disabled={loading}
-                >
-                  简行样例
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setText(SAMPLE_VCF)}
-                  disabled={loading}
-                >
-                  VCF 样例
-                </Button>
+        </>
+      }
+    >
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+        <Card className="overflow-hidden">
+          <CardHeader>
+            <CardTitle>输入与运行</CardTitle>
+            <CardDescription>
+              Monaco Editor 用于 VCF 片段或逐行变异；提交时自动抽取数据行。
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="engine">引擎</Label>
+                <Select value={engine} onValueChange={setEngine}>
+                  <SelectTrigger id="engine" className="w-full">
+                    <SelectValue placeholder="选择引擎" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {engines.map((item) => (
+                      <SelectItem key={item.id} value={item.id}>
+                        {item.name}
+                        {item.ready ? "" : "（未就绪）"}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="both">VEP + ANNOVAR</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="assembly">Assembly</Label>
+                <Select value={assembly} onValueChange={setAssembly}>
+                  <SelectTrigger id="assembly" className="w-full">
+                    <SelectValue placeholder="选择 assembly" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {assemblies.map((item) => (
+                      <SelectItem key={item} value={item}>
+                        {item}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-            <VariantEditor
-              value={text}
-              onChange={setText}
-              language="vcf"
-              height="360px"
-            />
-            <p className="text-xs text-muted-foreground">
-              支持每行一条（如 <code>17:43092951 G&gt;A</code>），或粘贴含{" "}
-              <code>#CHROM</code> 的 VCF 正文。
+
+            <p className="text-sm text-muted-foreground">
+              {currentEngine
+                ? currentEngine.ready
+                  ? `就绪 assembly：${currentEngine.ready_assemblies.join(", ") || "无"}`
+                  : "引擎未就绪：请挂载/下载对应 cache 或数据库"
+                : "加载引擎信息中…"}
             </p>
-          </div>
 
-          <div className="flex items-center gap-3">
-            <Button onClick={onSubmit} disabled={loading}>
-              {loading ? <Loader2 className="size-4 animate-spin" /> : null}
-              运行注释
-            </Button>
-          </div>
+            <Separator />
 
-          {error ? (
-            <Alert variant="destructive">
-              <AlertTitle>请求失败</AlertTitle>
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          ) : null}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>结果</CardTitle>
-          <CardDescription>表格展示主字段；完整 JSON 使用 Monaco 只读查看</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>input</TableHead>
-                <TableHead>gene</TableHead>
-                <TableHead>consequence</TableHead>
-                <TableHead>c.</TableHead>
-                <TableHead>p.</TableHead>
-                <TableHead>engine</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {results.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-muted-foreground">
-                    尚无结果
-                  </TableCell>
-                </TableRow>
-              ) : (
-                results.map((row, idx) => (
-                  <TableRow key={`${row.engine}-${row.input}-${row.feature}-${idx}`}>
-                    <TableCell className="align-top">{row.input}</TableCell>
-                    <TableCell className="align-top">{row.gene ?? "—"}</TableCell>
-                    <TableCell className="align-top">{row.consequence ?? "—"}</TableCell>
-                    <TableCell className="align-top">{row.cdot ?? "—"}</TableCell>
-                    <TableCell className="align-top">{row.protein ?? "—"}</TableCell>
-                    <TableCell className="align-top">{row.engine ?? "—"}</TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-
-          {rawJson ? (
             <div className="space-y-2">
-              <Label>原始 JSON（Monaco）</Label>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <Label>VCF / 变异输入（Monaco Editor）</Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setText(SAMPLE_LINES)}
+                    disabled={loading}
+                  >
+                    简行样例
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setText(SAMPLE_VCF)}
+                    disabled={loading}
+                  >
+                    VCF 样例
+                  </Button>
+                </div>
+              </div>
               <VariantEditor
-                value={rawJson}
-                onChange={() => undefined}
-                readOnly
-                language="json"
-                height="280px"
+                value={text}
+                onChange={setText}
+                language="vcf"
+                height="420px"
               />
+              <p className="text-xs text-muted-foreground">
+                支持 <code>17:43092951 G&gt;A</code>，或含 <code>#CHROM</code> 的 VCF 正文。
+              </p>
             </div>
-          ) : null}
-        </CardContent>
-      </Card>
+
+            <div className="flex items-center gap-3">
+              <Button onClick={onSubmit} disabled={loading}>
+                {loading ? <Loader2 className="size-4 animate-spin" /> : null}
+                运行注释
+              </Button>
+            </div>
+
+            {error ? (
+              <Alert variant="destructive">
+                <AlertTitle>请求失败</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            ) : null}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>结果</CardTitle>
+            <CardDescription>表格主字段 + Monaco JSON 只读面板</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="overflow-x-auto rounded-lg border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>input</TableHead>
+                    <TableHead>gene</TableHead>
+                    <TableHead>consequence</TableHead>
+                    <TableHead>c.</TableHead>
+                    <TableHead>p.</TableHead>
+                    <TableHead>engine</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {results.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-muted-foreground">
+                        尚无结果。提交后将显示在这里。
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    results.map((row, idx) => (
+                      <TableRow
+                        key={`${row.engine}-${row.input}-${row.feature}-${idx}`}
+                      >
+                        <TableCell className="align-top">{row.input}</TableCell>
+                        <TableCell className="align-top">
+                          {row.gene ?? "—"}
+                        </TableCell>
+                        <TableCell className="align-top">
+                          {row.consequence ?? "—"}
+                        </TableCell>
+                        <TableCell className="align-top">
+                          {row.cdot ?? "—"}
+                        </TableCell>
+                        <TableCell className="align-top">
+                          {row.protein ?? "—"}
+                        </TableCell>
+                        <TableCell className="align-top">
+                          {row.engine ?? "—"}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+
+            {rawJson ? (
+              <div className="space-y-2">
+                <Label>原始 JSON（Monaco）</Label>
+                <VariantEditor
+                  value={rawJson}
+                  onChange={() => undefined}
+                  readOnly
+                  language="json"
+                  height="320px"
+                />
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
       </div>
-    </div>
+    </AppShell>
   )
 }

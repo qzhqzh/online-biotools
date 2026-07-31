@@ -1,0 +1,91 @@
+import { useEffect, useState } from "react"
+
+import { AppShell } from "@/layouts/AppShell"
+import { Badge } from "@/components/ui/badge"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { fetchEngines, type EngineInfo } from "@/lib/api"
+
+export default function EnginesApp() {
+  const [engines, setEngines] = useState<EngineInfo[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetchEngines()
+      .then(setEngines)
+      .catch((err: Error) => setError(err.message))
+  }, [])
+
+  return (
+    <AppShell
+      title="引擎状态"
+      description="检查注释引擎与参考基因组数据是否就绪。"
+      crumbs={[
+        { label: "工具", href: "/tools/annotate/" },
+        { label: "引擎状态" },
+      ]}
+    >
+      <Card>
+        <CardHeader>
+          <CardTitle>注册引擎</CardTitle>
+          <CardDescription>
+            数据不就绪时，注释接口会返回 HTTP 503。
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {error ? (
+            <p className="text-sm text-destructive">{error}</p>
+          ) : !engines ? (
+            <div className="space-y-3">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Engine</TableHead>
+                  <TableHead>Version</TableHead>
+                  <TableHead>Supported</TableHead>
+                  <TableHead>Ready assemblies</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {engines.map((engine) => (
+                  <TableRow key={engine.id}>
+                    <TableCell className="font-medium">{engine.name}</TableCell>
+                    <TableCell>{engine.version}</TableCell>
+                    <TableCell>{engine.supported_assemblies.join(", ")}</TableCell>
+                    <TableCell>
+                      {engine.ready_assemblies.join(", ") || "—"}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={engine.ready ? "default" : "secondary"}>
+                        {engine.ready ? "Ready" : "Not ready"}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </AppShell>
+  )
+}

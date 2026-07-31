@@ -8,8 +8,9 @@ def home(request):
         return JsonResponse(
             {
                 "service": "online-biotools",
-                "docs": "/api/v1/engines/",
+                "docs": "/docs/",
                 "annotate_ui": "/tools/annotate/",
+                "engines_ui": "/tools/engines/",
             }
         )
     return render(request, "portal/home.html")
@@ -21,3 +22,11 @@ def annotate_tool(request):
         "csrfCookie": "csrftoken",
     }
     return render(request, "portal/annotate.html", {"bootstrap": bootstrap})
+
+
+def engines_page(request):
+    return render(request, "portal/engines.html")
+
+
+def docs_page(request):
+    return render(request, "portal/docs.html")
