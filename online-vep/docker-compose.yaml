@@ -1,0 +1,9 @@
+services:
+  vep:
+    image: ensemblorg/ensembl-vep:release_115.2
+    stdin_open: true
+    tty: true
+    working_dir: /test
+    volumes:
+      - ./vep_data:/opt/vep/.vep
+      - ./:/test

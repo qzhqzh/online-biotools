@@ -1,0 +1,68 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+*.cover
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+staticfiles/
+media/
+
+# Node / frontend build
+node_modules/
+frontend/dist/
+apps/portal/static/portal/dist/
+*.tsbuildinfo
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Secrets & download logs
+.env
+.env.*
+!.env.example
+wget-log
+wget-log.*
+*.wget-log
+
+# Large reference data (never commit)
+data/
+**/cache/
+**/vep_data/
+**/humandb/
+**/*.tar.gz
+**/*.tar.gz.*
+**/*.fa
+**/*.fa.gz
+**/*.fasta
+**/*.fasta.gz
+**/*.aria2
+
+# Local scratch / empty mounts
+online-tool/online-vep/data/
+online-vep/test_data/vep_output.txt
+
+# Misc binaries / dumps
+*.pyc
+*.bak
+*.tmp

@@ -1,0 +1,9 @@
+services:
+  annovar:
+    image: registry.cn-shanghai.aliyuncs.com/kszy-biosoft/annovar:v20180416_2
+    stdin_open: true
+    tty: true
+    working_dir: /test_data
+    volumes:
+      - ./humandb:/humandb
+      - ./test_data:/test_data
