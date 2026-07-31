@@ -38,9 +38,9 @@ ENV PATH="/opt/biotools/bin:$PATH" \
     VEP_CACHE_DIR=/data/vep \
     VEP_ASSEMBLY=GRCh37 \
     DJANGO_DEBUG=0 \
-    DJANGO_ALLOWED_HOSTS=*
+    DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
 
-RUN mkdir -p /data/vep /data/tmp && \
+RUN mkdir -p /data/vep /data/tmp /data/db && \
     useradd --create-home --uid 10001 biotools && \
     chown -R biotools:biotools /app /data
 
